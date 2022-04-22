@@ -917,6 +917,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8521a1b57e76b1ec69af7599e75e38e7b7fad6610f037db8c79b127201b5d119"
 
 [[package]]
+name = "mars-auction"
+version = "1.0.0"
+dependencies = [
+ "astroport",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 0.9.1",
+ "cw2 0.9.1",
+ "cw20 0.9.1",
+ "cw20-base",
+ "schemars",
+ "serde",
+]
+
+[[package]]
 name = "mirror-protocol"
 version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
