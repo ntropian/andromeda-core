@@ -40,6 +40,7 @@ serde = { version = "1.0.127", default-features = false, features = ["derive"] }
 cw20-base = { version = "0.9", features = ["library"] }
 schemars = "0.8.3"
 astroport = "1.0.1"
+cw-asset = "1.0.2"
 
 andromeda-protocol = { version = "0.1.0", path = "../../packages/andromeda_protocol" }
 common = { version = "0.1.0", path = "../../packages/common" }

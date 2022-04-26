@@ -17,6 +17,7 @@ use andromeda_protocol::liquidity_bootstrap::{
 
 use andromeda_protocol::lockdrop::ExecuteMsg::EnableClaims as LockdropEnableClaims;
 use cw2::set_contract_version;
+use cw_asset::AssetInfo as CwAssetInfo;
 
 use astroport::asset::{Asset, AssetInfo};
 use astroport::generator::{PendingTokenResponse, QueryMsg as GenQueryMsg};
@@ -26,7 +27,9 @@ use crate::{
     state::{Config, State, UserInfo, CONFIG, STATE, USERS},
 };
 use ado_base::ADOContract;
-use common::{ado_base::InstantiateMsg as BaseInstantiateMsg, error::ContractError, require};
+use common::{
+    ado_base::InstantiateMsg as BaseInstantiateMsg, encode_binary, error::ContractError, require,
+};
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
 const UUSD_DENOM: &str = "uusd";
@@ -246,7 +249,10 @@ pub fn execute_increase_incentives(
     let mut config = CONFIG.load(deps.storage)?;
     let state = STATE.load(deps.storage)?;
 
-    require(state.lp_shares_minted.is_zero(), ContractError::TokenAlreadyBeingDistributed {})?;
+    require(
+        state.lp_shares_minted.is_zero(),
+        ContractError::TokenAlreadyBeingDistributed {},
+    )?;
 
     config.token_rewards += amount;
     CONFIG.save(deps.storage, &config)?;
@@ -261,16 +267,14 @@ pub fn handle_update_config(
     deps: DepsMut,
     info: MessageInfo,
     new_config: UpdateConfigMsg,
-) -> StdResult<Response> {
+) -> Result<Response, ContractError> {
     let mut config = CONFIG.load(deps.storage)?;
+    let contract = ADOContract::default();
 
-    // CHECK :: ONLY OWNER CAN CALL THIS FUNCTION
-    if info.sender != config.owner {
-        return Err(StdError::generic_err("Only owner can update configuration"));
-    }
-
-    // UPDATE :: ADDRESSES IF PROVIDED
-    config.owner = option_string_to_addr(deps.api, new_config.owner, config.clone().owner)?;
+    require(
+        contract.is_contract_owner(deps.storage, info.sender.as_str())?,
+        ContractError::Unauthorized {},
+    )?;
 
     // IF POOL ADDRESS PROVIDED :: Update and query LP token address from the pool
     if let Some(astroport_lp_pool) = new_config.astroport_lp_pool {
@@ -287,15 +291,9 @@ pub fn handle_update_config(
         config.lp_token_address = Some(pair_info.liquidity_token);
     }
 
-    if let Some(mars_lp_staking_contract) = new_config.mars_lp_staking_contract {
-        config.mars_lp_staking_contract = Some(deps.api.addr_validate(&mars_lp_staking_contract)?);
+    if let Some(lp_staking_contract) = new_config.lp_staking_contract {
+        config.token_lp_staking_contract = Some(deps.api.addr_validate(&lp_staking_contract)?);
     }
-
-    config.generator_contract = option_string_to_addr(
-        deps.api,
-        new_config.generator_contract,
-        config.clone().generator_contract,
-    )?;
 
     CONFIG.save(deps.storage, &config)?;
     Ok(Response::new().add_attribute("action", "Auction::ExecuteMsg::UpdateConfig"))
@@ -314,7 +312,10 @@ pub fn handle_deposit_tokens(
     let config = CONFIG.load(deps.storage)?;
 
     // CHECK :: TOKEN delegations window open
-    require(is_token_deposit_open(env.block.time.seconds(), &config), ContractError::DepositWindowClosed {})?;
+    require(
+        is_token_deposit_open(env.block.time.seconds(), &config),
+        ContractError::DepositWindowClosed {},
+    )?;
 
     let mut state = STATE.load(deps.storage)?;
     let mut user_info = USERS
@@ -341,40 +342,41 @@ pub fn handle_deposit_ust(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-) -> Result<Response, StdError> {
+) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
-    // CHECK :: UST deposits window open
-    let ust_deposits_allowed_till = config.init_timestamp + config.ust_deposit_window;
-    if !(config.init_timestamp <= env.block.time.seconds()
-        && env.block.time.seconds() <= ust_deposits_allowed_till)
-    {
-        return Err(StdError::generic_err("UST deposits window closed"));
-    }
+    require(
+        is_ust_deposit_open(env.block.time.seconds(), &config),
+        ContractError::DepositWindowClosed {},
+    )?;
 
     let mut state = STATE.load(deps.storage)?;
     let mut user_info = USERS
         .may_load(deps.storage, &info.sender)?
         .unwrap_or_default();
 
-    // Check if multiple native coins sent by the user
-    if info.funds.len() > 1 {
-        return Err(StdError::generic_err("Trying to deposit several coins"));
-    }
+    require(
+        info.funds.len() == 1,
+        ContractError::InvalidFunds {
+            msg: "Can only deposit a single coin".to_string(),
+        },
+    )?;
 
     // Only UST accepted and amount > 0
     let native_token = info.funds.first().unwrap();
-    if native_token.denom != *UUSD_DENOM {
-        return Err(StdError::generic_err(
-            "Only UST among native tokens accepted",
-        ));
-    }
+    require(
+        native_token.denom == UUSD_DENOM,
+        ContractError::InvalidFunds {
+            msg: "Only UST among native tokens accepted".to_string(),
+        },
+    )?;
 
-    if native_token.amount.is_zero() {
-        return Err(StdError::generic_err(
-            "Deposit amount must be greater than 0",
-        ));
-    }
+    require(
+        !native_token.amount.is_zero(),
+        ContractError::InvalidFunds {
+            msg: "Deposit amount must be greater than 0".to_string(),
+        },
+    )?;
 
     // UPDATE STATE
     state.total_ust_deposited += native_token.amount;
@@ -386,8 +388,8 @@ pub fn handle_deposit_ust(
 
     Ok(Response::new().add_attributes(vec![
         attr("action", "Auction::ExecuteMsg::deposit_ust"),
-        attr("user_address", info.sender.to_string()),
-        attr("ust_deposited", native_token.amount.to_string()),
+        attr("user_address", info.sender),
+        attr("ust_deposited", native_token.amount),
     ]))
 }
 
@@ -398,7 +400,7 @@ pub fn handle_withdraw_ust(
     env: Env,
     info: MessageInfo,
     amount: Uint128,
-) -> Result<Response, StdError> {
+) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let mut state = STATE.load(deps.storage)?;
 
@@ -408,22 +410,23 @@ pub fn handle_withdraw_ust(
         .unwrap_or_default();
 
     // CHECK :: Has the user already withdrawn during the current window
-    if user_info.ust_withdrawn_flag {
-        return Err(StdError::generic_err(
-            "Max 1 withdrawal allowed during current window",
-        ));
-    }
+    require(
+        !user_info.ust_withdrawn_flag,
+        ContractError::InvalidWithdrawal {
+            msg: Some("Max 1 withdrawal allowed during current window".to_string()),
+        },
+    )?;
 
     // Check :: Amount should be within the allowed withdrawal limit bounds
     let max_withdrawal_percent = allowed_withdrawal_percent(env.block.time.seconds(), &config);
     let max_withdrawal_allowed = user_info.ust_deposited * max_withdrawal_percent;
 
-    if amount > max_withdrawal_allowed {
-        return Err(StdError::generic_err(format!(
-            "Amount exceeds maximum allowed withdrawal limit of {} uusd",
-            max_withdrawal_allowed
-        )));
-    }
+    require(
+        amount <= max_withdrawal_allowed,
+        ContractError::InvalidWithdrawal {
+            msg: Some("Amount exceeds maximum allowed withdrawal limit of {} uusd".to_string()),
+        },
+    )?;
 
     // After UST deposit window is closed, we allow to withdraw only once
     if env.block.time.seconds() > config.init_timestamp + config.ust_deposit_window {
@@ -463,56 +466,54 @@ pub fn handle_init_pool(
     env: Env,
     info: MessageInfo,
     slippage: Option<Decimal>,
-) -> Result<Response, StdError> {
+) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let state = STATE.load(deps.storage)?;
 
     // CHECK :: Only admin can call this function
-    if info.sender != config.owner {
-        return Err(StdError::generic_err("Unauthorized"));
-    }
+    require(
+        ADOContract::default().is_contract_owner(deps.storage, info.sender.as_str())?,
+        ContractError::Unauthorized {},
+    )?;
 
-    // CHECK :: Liquidity already provided to pool"));
-    if !state.lp_shares_minted.is_zero() {
-        return Err(StdError::generic_err("Liquidity already provided to pool"));
-    }
+    require(
+        state.lp_shares_minted.is_zero(),
+        ContractError::LiquidityAlreadyProvided {},
+    )?;
 
-    // CHECK :: Deposit / withdrawal windows need to be over
-    if !are_windows_closed(env.block.time.seconds(), &config) {
-        return Err(StdError::generic_err(
-            "Deposit/withdrawal windows are still open",
-        ));
-    }
+    require(
+        are_windows_closed(env.block.time.seconds(), &config),
+        ContractError::WindowsStillOpen {},
+    )?;
 
-    // CHECK :: LP Pool addresses should be set
-    if config.astroport_lp_pool.is_none() {
-        return Err(StdError::generic_err(
-            "Pool address to which liquidity is to be migrated not set",
-        ));
-    }
+    require(
+        config.astroport_lp_pool.is_some(),
+        ContractError::LpAddressNotSet {},
+    )?;
 
     // Init response
     let mut response =
         Response::new().add_attribute("action", "Auction::ExecuteMsg::AddLiquidityToAstroportPool");
 
+    let lp_token = CwAssetInfo::cw20(config.lp_token_address.clone().unwrap());
     // QUERY CURRENT LP TOKEN BALANCE (FOR SAFETY - IN ANY CASE)
-    let cur_lp_balance = cw20_get_balance(
-        &deps.querier,
-        config.lp_token_address.clone().unwrap(),
-        env.contract.address.clone(),
-    )?;
+    let cur_lp_balance = lp_token.query_balance(&deps.querier, env.contract.address.clone())?;
 
     // COSMOS MSGS
-    // :: 1.  APPROVE MARS WITH LP POOL ADDRESS AS BENEFICIARY
-    // :: 2.  ADD LIQUIDITY
+    // :: 1. APPROVE TOKEN WITH LP POOL ADDRESS AS BENEFICIARY
+    // :: 2. ADD LIQUIDITY
     // :: 3. CallbackMsg :: Update state on liquidity addition to LP Pool
     // :: 4. Activate Claims on Lockdrop Contract (In Callback)
     // :: 5. Update Claims on Airdrop Contract (In Callback)
-    let approve_mars_msg = build_approve_cw20_msg(
-        config.mars_token_address.to_string(),
-        config.astroport_lp_pool.clone().unwrap().to_string(),
-        state.total_mars_deposited,
-    )?;
+    let approve_token_msg = CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: config.token_address.to_string(),
+        funds: vec![],
+        msg: encode_binary(&Cw20ExecuteMsg::IncreaseAllowance {
+            spender: config.astroport_lp_pool.clone().unwrap().to_string(),
+            amount: state.total_token_deposited,
+            expires: None,
+        })?,
+    });
     let add_liquidity_msg =
         build_provide_liquidity_to_lp_pool_msg(deps.as_ref(), config, &state, slippage)?;
 
@@ -522,8 +523,8 @@ pub fn handle_init_pool(
     .to_cosmos_msg(&env.contract.address)?;
 
     response = response
-        .add_messages(vec![approve_mars_msg, add_liquidity_msg, update_state_msg])
-        .add_attribute("mars_deposited", state.total_mars_deposited)
+        .add_messages(vec![approve_token_msg, add_liquidity_msg, update_state_msg])
+        .add_attribute("token_deposited", state.total_token_deposited)
         .add_attribute("ust_deposited", state.total_ust_deposited);
 
     Ok(response)
@@ -531,29 +532,20 @@ pub fn handle_init_pool(
 
 /// @dev Admin function to stake Astroport LP tokens with the generator contract
 /// @params single_incentive_staking : Boolean value indicating if LP Tokens are to be staked with MARS LP Contract or not
-/// @params dual_incentives_staking : Boolean value indicating if LP Tokens are to be staked with Astroport Generator Contract or not
 pub fn handle_stake_lp_tokens(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
     single_incentive_staking: bool,
-    dual_incentives_staking: bool,
-) -> Result<Response, StdError> {
+) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let mut state = STATE.load(deps.storage)?;
     let mut are_being_unstaked = false;
 
-    // CHECK :: Only admin can call this function
-    if info.sender != config.owner {
-        return Err(StdError::generic_err("Unauthorized"));
-    }
-
-    // CHECK :: Check if valid boolean values are provided or not
-    if (single_incentive_staking && dual_incentives_staking)
-        || (!single_incentive_staking && !dual_incentives_staking)
-    {
-        return Err(StdError::generic_err("Invalid values provided"));
-    }
+    require(
+        ADOContract::default().is_contract_owner(deps.storage, info.sender.as_str())?,
+        ContractError::Unauthorized {},
+    )?;
 
     // Init response
     let mut response =
@@ -1306,6 +1298,12 @@ fn is_token_deposit_open(current_timestamp: u64, config: &Config) -> bool {
     (current_timestamp >= config.init_timestamp) && (deposits_opened_till >= current_timestamp)
 }
 
+/// @dev Returns true if deposits are allowed
+fn is_ust_deposit_open(current_timestamp: u64, config: &Config) -> bool {
+    let deposits_opened_till = config.init_timestamp + config.ust_deposit_window;
+    (current_timestamp >= config.init_timestamp) && (deposits_opened_till >= current_timestamp)
+}
+
 //----------------------------------------------------------------------------------------
 // HELPERS :: QUERIES
 //----------------------------------------------------------------------------------------
@@ -1493,4 +1491,4 @@ fn build_activate_claims_lockdrop_msg(lockdrop_contract_address: Addr) -> StdRes
         msg: to_binary(&LockdropEnableClaims {})?,
         funds: vec![],
     }))
-/// @dev Returns true if deposits are allowed}
+}

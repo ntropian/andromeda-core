@@ -344,6 +344,18 @@ pub enum ContractError {
 
     #[error("Invaild vesting duration")]
     InvalidVestingDuration {},
+
+    #[error("Liquidity already provided")]
+    LiquidityAlreadyProvided {},
+
+    #[error("Windows still open")]
+    WindowsStillOpen {},
+
+    #[error("Lp address not set")]
+    LpAddressNotSet {},
+
+    #[error("Invalid values")]
+    InvalidValues {},
 }
 
 impl From<Cw20ContractError> for ContractError {
