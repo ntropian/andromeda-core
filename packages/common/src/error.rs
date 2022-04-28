@@ -356,6 +356,9 @@ pub enum ContractError {
 
     #[error("Invalid values")]
     InvalidValues {},
+
+    #[error("Staking error: {msg}")]
+    StakingError { msg: String },
 }
 
 impl From<Cw20ContractError> for ContractError {

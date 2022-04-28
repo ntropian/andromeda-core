@@ -93,40 +93,36 @@ pub enum QueryMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ConfigResponse {
-    pub owner: String,
-    pub mars_token_address: String,
-    pub astro_token_address: String,
-    pub airdrop_contract_address: String,
-    pub lockdrop_contract_address: String,
+    pub token_address: String,
+    pub lockdrop_contract_address: Option<Addr>,
     pub astroport_lp_pool: Option<Addr>,
     pub lp_token_address: Option<Addr>,
-    pub mars_lp_staking_contract: Option<Addr>,
-    pub generator_contract: String,
-    pub mars_rewards: Uint128,
-    pub mars_vesting_duration: u64,
+    pub token_lp_staking_contract: Option<Addr>,
+    pub token_rewards: Uint128,
+    pub token_vesting_duration: u64,
     pub lp_tokens_vesting_duration: u64,
     pub init_timestamp: u64,
-    pub mars_deposit_window: u64,
+    pub token_deposit_window: u64,
     pub ust_deposit_window: u64,
     pub withdrawal_window: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct StateResponse {
-    pub total_mars_deposited: Uint128,
+    pub total_token_deposited: Uint128,
     pub total_ust_deposited: Uint128,
     pub lp_shares_minted: Uint128,
     pub lp_shares_withdrawn: Uint128,
     pub are_staked_for_single_incentives: bool,
     pub are_staked_for_dual_incentives: bool,
     pub pool_init_timestamp: u64,
-    pub global_mars_reward_index: Decimal,
+    pub global_token_reward_index: Decimal,
     pub global_astro_reward_index: Decimal,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct UserInfoResponse {
-    pub mars_deposited: Uint128,
+    pub token_deposited: Uint128,
     pub ust_deposited: Uint128,
     pub ust_withdrawn_flag: bool,
     pub lp_shares: Uint128,
@@ -135,9 +131,9 @@ pub struct UserInfoResponse {
     pub total_auction_incentives: Uint128,
     pub withdrawn_auction_incentives: Uint128,
     pub withdrawable_auction_incentives: Uint128,
-    pub mars_reward_index: Decimal,
-    pub withdrawable_mars_incentives: Uint128,
-    pub withdrawn_mars_incentives: Uint128,
+    pub token_reward_index: Decimal,
+    pub withdrawable_token_incentives: Uint128,
+    pub withdrawn_token_incentives: Uint128,
     pub astro_reward_index: Decimal,
     pub withdrawable_astro_incentives: Uint128,
     pub withdrawn_astro_incentives: Uint128,

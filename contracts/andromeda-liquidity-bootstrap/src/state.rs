@@ -53,7 +53,7 @@ pub struct State {
     pub lp_shares_withdrawn: Uint128,
     /// True if TOKEN--UST LP Shares are currently staked with the TOKEN LP Staking contract
     pub are_staked_for_single_incentives: bool,
-    /// True if TOKEN--UST LP Shares are currently staked with Astroport Generator for dual staking incentives
+    /// True if TOKEN--UST LP Shares are currently staked with the Generator
     pub are_staked_for_dual_incentives: bool,
     /// Timestamp at which liquidity was added to the TOKEN-UST LP Pool
     pub pool_init_timestamp: u64,
