@@ -618,14 +618,13 @@ pub fn handle_stake_lp_tokens(
         // Unstake from LP Staking contract (if staked)
         if state.are_staked_for_single_incentives {
             response = response
-                .add_message(build_unstake_from_mars_staking_contract_msg(
+                .add_message(build_unstake_from_staking_contract_msg(
                     config
                         .token_lp_staking_contract
                         .clone()
                         .expect("LP Staking contract not set")
                         .to_string(),
                     lp_shares_balance,
-                    true,
                 )?)
                 .add_attribute(
                     "shares_unstaked_from_lp_staking",
@@ -738,28 +737,28 @@ pub fn handle_claim_rewards_and_unlock(
 
     // --> IF LP TOKENS are staked with MARS LP Staking contract
     if state.are_staked_for_single_incentives {
-        let unclaimed_rewards_response = query_unclaimed_staking_rewards_at_mars_lp_staking(
+        let pending_token_rewards = query_unclaimed_staking_rewards_at_lp_staking(
             &deps.querier,
             config
                 .token_lp_staking_contract
                 .clone()
                 .expect("LP Staking contract not set")
                 .to_string(),
+            config.token_address.as_str(),
             env.contract.address.clone(),
-        );
+        )?;
 
-        if unclaimed_rewards_response.pending_reward > Uint128::zero() || withdraw_unlocked_shares {
+        if pending_token_rewards > Uint128::zero() || withdraw_unlocked_shares {
             let claim_reward_msg: CosmosMsg;
             // If LP tokens are to be withdrawn. We unstake the equivalent amount. Rewards are automatically claimed with the call
             if withdraw_unlocked_shares {
-                claim_reward_msg = build_unstake_from_mars_staking_contract_msg(
+                claim_reward_msg = build_unstake_from_staking_contract_msg(
                     config
                         .token_lp_staking_contract
                         .clone()
                         .expect("LP Staking contract not set")
                         .to_string(),
                     lp_shares_to_withdraw,
-                    true,
                 )?;
             }
             // If only rewards are to be claimed
@@ -881,7 +880,7 @@ pub fn update_state_on_reward_claim(
     let contract = ADOContract::default();
 
     // Claimed Rewards :: QUERY TOKEN & ASTRO TOKEN BALANCE
-    let token = CwAssetInfo::cw20(config.token_address);
+    let token = CwAssetInfo::cw20(config.token_address.clone());
     let cur_token_balance = token.query_balance(&deps.querier, env.contract.address.clone())?;
 
     let astro_token_address = contract.get_cached_address(deps.storage, ASTROPORT_ASTRO)?;
@@ -1052,16 +1051,17 @@ fn query_user_info(
 
     // --> IF LP TOKENS are staked with MARS LP STaking contract
     if state.are_staked_for_single_incentives {
-        let unclaimed_rewards_response = query_unclaimed_staking_rewards_at_mars_lp_staking(
+        let pending_token_rewards = query_unclaimed_staking_rewards_at_lp_staking(
             &deps.querier,
             config
                 .token_lp_staking_contract
                 .clone()
                 .expect("LP Staking contract not set")
                 .to_string(),
+            config.token_address.as_str(),
             env.contract.address.clone(),
-        );
-        update_mars_rewards_index(&mut state, unclaimed_rewards_response.pending_reward);
+        )?;
+        update_mars_rewards_index(&mut state, pending_token_rewards);
         withdrawable_token_incentives = compute_user_accrued_mars_reward(&state, &mut user_info);
     }
 
@@ -1340,22 +1340,30 @@ fn query_unclaimed_staking_rewards_at_generator(
 /// @dev Queries pending rewards to be claimed from the MARS LP Staking contract
 /// @param config : Configuration
 /// @param contract_addr : Address for which pending rewards are to be queried
-fn query_unclaimed_staking_rewards_at_mars_lp_staking(
+fn query_unclaimed_staking_rewards_at_lp_staking(
     querier: &QuerierWrapper,
     mars_lp_staking_contract: String,
+    token_address: &str,
     contract_addr: Addr,
-) -> mars_periphery::lp_staking::StakerInfoResponse {
-    let pending_rewards: mars_periphery::lp_staking::StakerInfoResponse = querier
+) -> Result<Uint128, ContractError> {
+    let unclaimed_rewards_response: andromeda_protocol::cw20_staking::StakerResponse = querier
         .query(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: mars_lp_staking_contract,
-            msg: to_binary(&mars_periphery::lp_staking::QueryMsg::StakerInfo {
-                staker: contract_addr.to_string(),
-                timestamp: None,
-            })
-            .unwrap(),
-        }))
-        .unwrap();
-    pending_rewards
+            msg: to_binary(&andromeda_protocol::cw20_staking::QueryMsg::Staker {
+                address: contract_addr.to_string(),
+            })?,
+        }))?;
+    let pending_token_rewards = unclaimed_rewards_response
+        .pending_rewards
+        .into_iter()
+        .find(|t| t.0 == token_address);
+
+    match pending_token_rewards {
+        Some(pending_token_rewards) => Ok(pending_token_rewards.1),
+        None => Err(ContractError::StakingError {
+            msg: format!("{} is not a valid reward in the vault", token_address),
+        }),
+    }
 }
 
 //----------------------------------------------------------------------------------------
@@ -1368,10 +1376,10 @@ pub fn build_stake_with_mars_staking_contract_msg(
     config: Config,
     amount: Uint128,
 ) -> StdResult<CosmosMsg> {
-    let stake_msg = to_binary(&mars_periphery::lp_staking::Cw20HookMsg::Bond {})?;
+    let stake_msg = to_binary(&andromeda_protocol::cw20_staking::Cw20HookMsg::StakeTokens {})?;
     build_send_cw20_token_msg(
         config
-            .mars_lp_staking_contract
+            .token_lp_staking_contract
             .expect("LP Staking address not set")
             .to_string(),
         config
@@ -1387,17 +1395,17 @@ pub fn build_stake_with_mars_staking_contract_msg(
 /// @param config : Configuration
 /// @param amount : LP tokens to unstake
 /// @param claim_rewards : Boolean value indicating is Rewards are to be claimed or not
-pub fn build_unstake_from_mars_staking_contract_msg(
+pub fn build_unstake_from_staking_contract_msg(
     mars_lp_staking_contract: String,
     amount: Uint128,
-    claim_rewards: bool,
 ) -> StdResult<CosmosMsg> {
     Ok(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: mars_lp_staking_contract,
-        msg: to_binary(&mars_periphery::lp_staking::ExecuteMsg::Unbond {
-            amount,
-            withdraw_pending_reward: Some(claim_rewards),
-        })?,
+        msg: to_binary(
+            &andromeda_protocol::cw20_staking::ExecuteMsg::UnstakeTokens {
+                amount: Some(amount),
+            },
+        )?,
         funds: vec![],
     }))
 }
@@ -1409,7 +1417,7 @@ pub fn build_claim_rewards_from_mars_staking_contract_msg(
 ) -> StdResult<CosmosMsg> {
     Ok(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: mars_lp_staking_contract,
-        msg: to_binary(&mars_periphery::lp_staking::ExecuteMsg::Claim {})?,
+        msg: to_binary(&andromeda_protocol::cw20_staking::ExecuteMsg::ClaimRewards {})?,
         funds: vec![],
     }))
 }

@@ -1,3 +1,7 @@
+use andromeda_protocol::liquidity_bootstrap::{
+    ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg, StateResponse,
+    UpdateConfigMsg, UserInfoResponse,
+};
 use astroport::vesting::{
     Cw20HookMsg as VestingHookMsg, InstantiateMsg as VestingInstantiateMsg, VestingAccount,
     VestingSchedule, VestingSchedulePoint,
@@ -5,11 +9,6 @@ use astroport::vesting::{
 use cosmwasm_std::testing::{mock_env, MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{attr, to_binary, Addr, Coin, Decimal, Timestamp, Uint128, Uint64};
 use cw20::Cw20ExecuteMsg;
-use mars_periphery::auction::{
-    ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg, StateResponse,
-    UpdateConfigMsg, UserInfoResponse,
-};
-use mars_periphery::lockdrop::LockupDurationParams;
 use terra_multi_test::{App, BankKeeper, ContractWrapper, Executor, TerraMockQuerier};
 
 fn mock_app() -> App {
@@ -59,7 +58,7 @@ fn instantiate_mars_token(app: &mut App, owner: Addr) -> Addr {
 fn mint_some_tokens(app: &mut App, owner: Addr, token_instance: Addr, amount: Uint128, to: String) {
     let msg = cw20::Cw20ExecuteMsg::Mint {
         recipient: to.clone(),
-        amount: amount,
+        amount,
     };
     let res = app
         .execute_contract(owner.clone(), token_instance.clone(), &msg, &[])
@@ -1390,7 +1389,10 @@ fn test_deposit_ust() {
     assert_eq!(Uint128::from(0u64), user_resp.mars_deposited);
     assert_eq!(Uint128::from(10000u64), user_resp.ust_deposited);
     assert_eq!(Uint128::zero(), user_resp.lp_shares);
-    assert_eq!(Uint128::from(5000000000000u64), user_resp.total_auction_incentives);
+    assert_eq!(
+        Uint128::from(5000000000000u64),
+        user_resp.total_auction_incentives
+    );
 
     // ######    SUCCESS :: UST Successfully deposited again     ######
     app.execute_contract(
@@ -1421,7 +1423,10 @@ fn test_deposit_ust() {
     assert_eq!(Uint128::from(0u64), user_resp.mars_deposited);
     assert_eq!(Uint128::from(20000u64), user_resp.ust_deposited);
     assert_eq!(Uint128::zero(), user_resp.lp_shares);
-    assert_eq!(Uint128::from(5000000000000u64), user_resp.total_auction_incentives);
+    assert_eq!(
+        Uint128::from(5000000000000u64),
+        user_resp.total_auction_incentives
+    );
 
     // finish claim period for deposit failure
     app.update_block(|b| {

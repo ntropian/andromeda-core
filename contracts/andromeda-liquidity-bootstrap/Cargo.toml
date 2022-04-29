@@ -1,5 +1,5 @@
 [package]
-name = "mars-auction"
+name = "andromeda-bootstrap"
 version = "1.0.0"
 edition = "2018"
 
@@ -48,3 +48,11 @@ ado-base = { path = "../../packages/ado_base", version = "0.1.0" }
 
 [dev-dependencies]
 cosmwasm-schema = { version = "0.16.0" }
+terra-multi-test = {git = "https://github.com/astroport-fi/terra-plus.git", tag = "v0.8.0-terra1"}
+
+astroport-generator = {git = "https://github.com/astroport-fi/astroport.git", branch = "main", package = "astroport-generator"}
+
+astroport-vesting = { git = "https://github.com/astroport-fi/astroport.git", tag = "v1.0.0", package = "astroport-vesting"}
+astroport-factory =  {git = "https://github.com/astroport-fi/astroport-core.git", tag = "v1.0.0", package = "astroport-factory"}
+astroport-pair =  {git = "https://github.com/astroport-fi/astroport-core.git", tag = "v1.0.0", package = "astroport-pair"}
+astroport-token =  {git = "https://github.com/astroport-fi/astroport-core.git", tag = "v1.0.0", package = "astroport-token"}
