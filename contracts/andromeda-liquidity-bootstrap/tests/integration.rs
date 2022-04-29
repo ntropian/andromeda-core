@@ -80,10 +80,11 @@ fn instantiate_astro_and_generator_and_vesting(
         astroport_vesting::contract::instantiate,
         astroport_vesting::contract::query,
     ));
-    // let owner = Addr::unchecked(owner.clone());
+    let owner = Addr::unchecked(owner.clone());
     let vesting_code_id = app.store_code(vesting_contract);
 
     let init_msg = VestingInstantiateMsg {
+        owner: owner.to_string(),
         token_addr: astro_token_instance.to_string(),
     };
 
@@ -151,7 +152,7 @@ fn instantiate_astro_and_generator_and_vesting(
                 address: generator_instance.to_string(),
                 schedules: vec![VestingSchedule {
                     start_point: VestingSchedulePoint {
-                        time: current_block.time,
+                        time: current_block.time.seconds(),
                         amount,
                     },
                     end_point: None,
@@ -172,32 +173,29 @@ fn instantiate_astro_and_generator_and_vesting(
 fn instantiate_auction_contract(
     app: &mut App,
     owner: Addr,
-    mars_token_instance: Addr,
+    token_instance: Addr,
     astro_token_instance: Addr,
     airdrop_instance: Addr,
     lockdrop_instance: Addr,
     generator_instance: Addr,
 ) -> (Addr, InstantiateMsg) {
     let auction_contract = Box::new(ContractWrapper::new(
-        mars_auction::contract::execute,
-        mars_auction::contract::instantiate,
-        mars_auction::contract::query,
+        andromeda_bootstrap::contract::execute,
+        andromeda_bootstrap::contract::instantiate,
+        andromeda_bootstrap::contract::query,
     ));
 
     let auction_code_id = app.store_code(auction_contract);
 
-    let auction_instantiate_msg = mars_periphery::auction::InstantiateMsg {
-        owner: owner.to_string(),
-        mars_token_address: mars_token_instance.clone().into_string(),
-        astro_token_address: astro_token_instance.clone().into_string(),
-        airdrop_contract_address: airdrop_instance.to_string(),
-        lockdrop_contract_address: lockdrop_instance.to_string(),
-        generator_contract: generator_instance.to_string(),
-        mars_vesting_duration: 259200u64,
+    let auction_instantiate_msg = andromeda_protocol::liquidity_bootstrap::InstantiateMsg {
+        token_address: token_instance.clone().into_string(),
+        lockdrop_contract_address: Some(lockdrop_instance.to_string()),
+        primitive_contract: "".to_string(),
+        token_vesting_duration: 259200u64,
         lp_tokens_vesting_duration: 7776000u64,
         init_timestamp: 17_000_00,
         ust_deposit_window: 5_000_00,
-        mars_deposit_window: 5_000_00,
+        token_deposit_window: 5_000_00,
         withdrawal_window: 2_000_00,
     };
 

@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
-    pub owner: String,
     pub token_address: String,
     pub lockdrop_contract_address: Option<String>,
     pub token_vesting_duration: u64,
