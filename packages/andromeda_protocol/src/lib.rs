@@ -20,6 +20,7 @@ pub mod receipt;
 pub mod splitter;
 pub mod swapper;
 pub mod vault;
+pub mod wormhole;
 pub mod wrapped_cw721;
 
 #[cfg(not(target_arch = "wasm32"))]

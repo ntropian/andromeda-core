@@ -332,6 +332,7 @@ dependencies = [
  "schemars",
  "serde",
  "terra-cosmwasm",
+ "terraswap",
  "thiserror",
 ]
 
@@ -447,6 +448,23 @@ dependencies = [
  "schemars",
  "serde",
  "terra-cosmwasm",
+]
+
+[[package]]
+name = "andromeda_wormhole"
+version = "0.1.0"
+dependencies = [
+ "ado-base",
+ "andromeda-protocol",
+ "common",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 0.9.1",
+ "cw2 0.9.1",
+ "cw20 0.9.1",
+ "schemars",
+ "serde",
+ "terraswap",
 ]
 
 [[package]]
