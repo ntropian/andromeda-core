@@ -17,6 +17,8 @@ use terraswap::asset::{Asset, AssetInfo};
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:andromeda_wormhole";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+// Terra's chain ID
+const CHAIN_ID: u16 = 3;
 
 #[entry_point]
 pub fn instantiate(
@@ -26,7 +28,9 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
     let contract = ADOContract::default();
+
     let resp = contract.instantiate(
         deps.storage,
         deps.api,
@@ -38,9 +42,11 @@ pub fn instantiate(
             primitive_contract: Some(msg.primitive_contract),
         },
     )?;
+
     for address in ADDRESSES_TO_CACHE {
         contract.cache_address(deps.storage, &deps.querier, address)?;
     }
+
     Ok(resp)
 }
 
@@ -51,9 +57,6 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    let contract = ADOContract::default();
-    let wormhole_token_bridge_contract =
-        contract.get_cached_address(deps.storage, WORMHOLE_TOKEN_BRIDGE)?;
     match msg {
         ExecuteMsg::AndrReceive(msg) => {
             ADOContract::default().execute(deps, env, info, msg, execute)
@@ -91,12 +94,15 @@ fn execute_submit_vaa(
 ) -> Result<Response, ContractError> {
     let contract = ADOContract::default();
     let token_bridge = contract.get_cached_address(deps.storage, WORMHOLE_TOKEN_BRIDGE)?;
+
     let msg = CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: token_bridge,
         msg: encode_binary(&ExecuteMsg::SubmitVaa { data })?,
         funds: vec![],
     });
+
     let sub_msg = SubMsg::reply_on_success(msg, 0);
+
     Ok(Response::new()
         .add_attribute("action", "submitted_vaa")
         .add_submessage(sub_msg))
@@ -108,14 +114,18 @@ fn execute_register_asset_hook(
     info: MessageInfo,
     asset_id: &[u8],
 ) -> Result<Response, ContractError> {
+    let contract = ADOContract::default();
+    let token_bridge = contract.get_cached_address(deps.storage, WORMHOLE_TOKEN_BRIDGE)?;
     let binary_asset_id = encode_binary(&asset_id)?;
+
     let msg = CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr: WORMHOLE_TOKEN_BRIDGE.to_string(),
+        contract_addr: token_bridge,
         msg: encode_binary(&ExecuteMsg::RegisterAssetHook {
             asset_id: binary_asset_id,
         })?,
         funds: vec![],
     });
+
     Ok(Response::new()
         .add_attribute("action", "registered_asset")
         .add_message(msg))
@@ -128,12 +138,22 @@ fn execute_initiate_transfer(
     asset: Asset,
     recipient_chain: u16,
     recipient: Vec<u8>,
-    mut fee: Uint128,
+    fee: Uint128,
     nonce: u32,
 ) -> Result<Response, ContractError> {
+    require(
+        recipient_chain != CHAIN_ID,
+        ContractError::SameSourceAndTarget {},
+    )?;
+    let amount = asset.amount;
+
+    require(!amount.is_zero(), ContractError::AmountTooLow {})?;
+    require(fee <= amount, ContractError::FeeGreaterThanAmount {})?;
+
     let contract = ADOContract::default();
     let token_bridge = contract.get_cached_address(deps.storage, WORMHOLE_TOKEN_BRIDGE)?;
     let binary_recipient = encode_binary(&recipient)?;
+
     let msg = SubMsg::new(WasmMsg::Execute {
         contract_addr: token_bridge,
         msg: encode_binary(&ExecuteMsg::InitiateTransfer {
@@ -145,6 +165,7 @@ fn execute_initiate_transfer(
         })?,
         funds: vec![],
     });
+
     Ok(Response::new().add_submessage(msg))
 }
 
@@ -159,14 +180,17 @@ fn execute_deposit_tokens(
             msg: "No funds detected".to_string(),
         },
     )?;
+
     let contract = ADOContract::default();
     let token_bridge = contract.get_cached_address(deps.storage, WORMHOLE_TOKEN_BRIDGE)?;
     let funds = info.funds;
+
     let msg = WasmMsg::Execute {
         contract_addr: token_bridge,
         msg: encode_binary(&ExecuteMsg::DepositTokens {})?,
         funds,
     };
+
     let sub_msg = SubMsg::reply_on_success(msg, 0);
 
     Ok(Response::new()
@@ -182,12 +206,15 @@ fn execute_withdraw_tokens(
 ) -> Result<Response, ContractError> {
     let contract = ADOContract::default();
     let token_bridge = contract.get_cached_address(deps.storage, WORMHOLE_TOKEN_BRIDGE)?;
+
     let msg = WasmMsg::Execute {
         contract_addr: token_bridge,
         msg: encode_binary(&ExecuteMsg::WithdrawTokens { asset })?,
         funds: vec![],
     };
+
     let sub_msg = SubMsg::reply_on_success(msg, 0);
+
     Ok(Response::new()
         .add_attribute("action", "withdraw_tokens")
         .add_submessage(sub_msg))
@@ -203,10 +230,12 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     let version = get_contract_version(deps.storage)?;
+
     if version.contract != CONTRACT_NAME {
         return Err(ContractError::CannotMigrate {
             previous_contract: version.contract,
         });
     }
+
     Ok(Response::default())
 }

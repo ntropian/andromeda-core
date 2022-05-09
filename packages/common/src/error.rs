@@ -37,6 +37,9 @@ pub enum ContractError {
     #[error("AmountExceededHundredPrecent")]
     AmountExceededHundredPrecent {},
 
+    #[error("Amount Too Low")]
+    AmountTooLow {},
+
     #[error("InvalidAddress")]
     InvalidAddress {},
 
@@ -78,6 +81,9 @@ pub enum ContractError {
 
     #[error("NoLockedFunds")]
     NoLockedFunds {},
+
+    #[error("FeeGreaterThanAmount")]
+    FeeGreaterThanAmount {},
 
     #[error("FundsAreLocked")]
     FundsAreLocked {},
@@ -291,6 +297,9 @@ pub enum ContractError {
 
     #[error("Invalid Withdrawal: {msg:?}")]
     InvalidWithdrawal { msg: Option<String> },
+
+    #[error("Same Source and Target")]
+    SameSourceAndTarget {},
 
     #[error("Airdrop stage {stage} expired at {expiration}")]
     StageExpired { stage: u8, expiration: Expiration },
