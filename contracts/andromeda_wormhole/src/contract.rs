@@ -101,7 +101,7 @@ fn execute_submit_vaa(
         funds: vec![],
     });
 
-    let sub_msg = SubMsg::reply_on_success(msg, 0);
+    let sub_msg = SubMsg::new(msg);
 
     Ok(Response::new()
         .add_attribute("action", "submitted_vaa")
@@ -191,7 +191,7 @@ fn execute_deposit_tokens(
         funds,
     };
 
-    let sub_msg = SubMsg::reply_on_success(msg, 0);
+    let sub_msg = SubMsg::new(msg);
 
     Ok(Response::new()
         .add_attribute("action", "deposit_tokens")
@@ -213,7 +213,7 @@ fn execute_withdraw_tokens(
         funds: vec![],
     };
 
-    let sub_msg = SubMsg::reply_on_success(msg, 0);
+    let sub_msg = SubMsg::new(msg);
 
     Ok(Response::new()
         .add_attribute("action", "withdraw_tokens")
