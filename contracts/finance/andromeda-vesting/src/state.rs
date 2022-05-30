@@ -1,3 +1,4 @@
+use crate::validator_set::ValidatorSet;
 use common::{
     ado_base::recipient::Recipient, error::ContractError, require, withdraw::WithdrawalType,
 };
@@ -12,6 +13,9 @@ pub const CONFIG: Item<Config> = Item::new("config");
 
 /// The next ID to use for a newly added batch.
 pub const NEXT_ID: Item<u64> = Item::new("next_id");
+
+/// The set of validators that are used for delegating.
+pub const VALIDATORS: Item<ValidatorSet> = Item::new("validator_set");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
