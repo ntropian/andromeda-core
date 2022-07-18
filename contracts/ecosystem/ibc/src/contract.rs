@@ -68,20 +68,31 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Receive(msg) => {
-            let coin = one_coin(&info)?;
-            execute_receive(deps, env, info, msg)
-        }
+        ExecuteMsg::Receive(msg) => execute_receive(deps, env, info, msg),
         // ExecuteMsg::Transfer(msg) => {
         //     let coin = one_coin(&info)?;
         //     execute_transfer(deps, env, msg, Amount::Native(coin), info.sender)
         // }
+        ExecuteMsg::HandlePacket(msg) => execute_handle_packet(deps, env, info, msg),
         ExecuteMsg::Allow(allow) => execute_allow(deps, env, info, allow),
         ExecuteMsg::UpdateAdmin { admin } => {
             let admin = deps.api.addr_validate(&admin)?;
             Ok(ADMIN.execute_update_admin(deps, info, Some(admin))?)
         }
     }
+}
+
+pub fn execute_handle_packet(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    packet: IcsGenericPacket,
+) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
+
+    let msg: CosmosMsg = from_binary(&packet.generic_data)?;
+    let res = Response::new().add_message(msg);
+    Ok(res)
 }
 
 pub fn execute_receive(

@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use cw20::Cw20ReceiveMsg;
 
 use crate::amount::Amount;
+use crate::ibc::IcsGenericPacket;
 use crate::state::ChannelInfo;
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
@@ -35,6 +36,8 @@ pub struct MigrateMsg {
 pub enum ExecuteMsg {
     /// This accepts a properly-encoded ReceiveMsg from a cw20 contract
     Receive(Cw20ReceiveMsg),
+    /// Unpacks the packet
+    HandlePacket(IcsGenericPacket),
     /// This allows us to transfer *exactly one* native token
     // Transfer(TransferMsg),
     /// This must be called by gov_contract, will allow a new cw20 token to be sent
