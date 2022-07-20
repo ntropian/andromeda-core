@@ -29,7 +29,7 @@ use cw_utils::{maybe_addr, nonpayable, one_coin};
 use semver::Version;
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:cw20-ics20";
+const CONTRACT_NAME: &str = "crates.io:ibc-ado";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -73,26 +73,13 @@ pub fn execute(
         //     let coin = one_coin(&info)?;
         //     execute_transfer(deps, env, msg, Amount::Native(coin), info.sender)
         // }
-        ExecuteMsg::HandlePacket(msg) => execute_handle_packet(deps, env, info, msg),
+        // ExecuteMsg::HandlePacket(msg) => ibc_packet_receive(deps, env, msg),
         ExecuteMsg::Allow(allow) => execute_allow(deps, env, info, allow),
         ExecuteMsg::UpdateAdmin { admin } => {
             let admin = deps.api.addr_validate(&admin)?;
             Ok(ADMIN.execute_update_admin(deps, info, Some(admin))?)
         }
     }
-}
-
-pub fn execute_handle_packet(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    packet: IcsGenericPacket,
-) -> Result<Response, ContractError> {
-    nonpayable(&info)?;
-
-    let msg: CosmosMsg = from_binary(&packet.generic_data)?;
-    let res = Response::new().add_message(msg);
-    Ok(res)
 }
 
 pub fn execute_receive(
@@ -233,7 +220,7 @@ fn do_ibc_packet_receive(
     // If the token originated on the remote chain, it looks like "ucosm".
     // If it originated on our chain, it looks like "port/channel/ucosm".
     let denom = parse_voucher_denom(&msg.denom, &packet.src)?;
-    let generic_message = from_binary(&msg.generic_data)?;
+    let generic_message: CosmosMsg = from_binary(&msg.generic_data)?;
 
     // make sure we have enough balance for this
     reduce_channel_balance(deps.storage, &channel, denom, msg.amount)?;
@@ -255,6 +242,7 @@ fn do_ibc_packet_receive(
     let res = IbcReceiveResponse::new()
         .set_ack(ack_success())
         .add_submessage(submsg)
+        .add_message(generic_message)
         .add_attribute("action", "receive")
         .add_attribute("sender", msg.sender)
         .add_attribute("receiver", msg.receiver)
@@ -552,7 +540,7 @@ mod test {
     use crate::test_helpers::*;
 
     use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
-    use cosmwasm_std::{coin, coins, CosmosMsg, IbcMsg, StdError, Uint128};
+    use cosmwasm_std::{coins, CosmosMsg, IbcMsg, StdError, Uint128};
 
     use crate::state::ChannelState;
     use cw_utils::PaymentError;
@@ -588,68 +576,11 @@ mod test {
             },
         )
         .unwrap_err();
-        assert_eq!(err, StdError::not_found("cw20_ics20::state::ChannelInfo"));
+        assert_eq!(
+            err,
+            StdError::not_found("andromeda_ibc::state::ChannelInfo")
+        );
     }
-
-    // #[test]
-    // fn proper_checks_on_execute_native() {
-    //     let send_channel = "channel-5";
-    //     let mut deps = setup(&[send_channel, "channel-10"], &[]);
-
-    //     let mut transfer = TransferMsg {
-    //         channel: send_channel.to_string(),
-    //         remote_address: "foreign-address".to_string(),
-    //         timeout: None,
-    //     };
-
-    //     // works with proper funds
-    //     let msg = ExecuteMsg::Transfer(transfer.clone());
-    //     let info = mock_info("foobar", &coins(1234567, "ucosm"));
-    //     let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
-    //     assert_eq!(res.messages[0].gas_limit, None);
-    //     assert_eq!(1, res.messages.len());
-    //     if let CosmosMsg::Ibc(IbcMsg::SendPacket {
-    //         channel_id,
-    //         data,
-    //         timeout,
-    //     }) = &res.messages[0].msg
-    //     {
-    //         let expected_timeout = mock_env().block.time.plus_seconds(DEFAULT_TIMEOUT);
-    //         assert_eq!(timeout, &expected_timeout.into());
-    //         assert_eq!(channel_id.as_str(), send_channel);
-    //         let msg: Ics20Packet = from_binary(data).unwrap();
-    //         assert_eq!(msg.amount, Uint128::new(1234567));
-    //         assert_eq!(msg.denom.as_str(), "ucosm");
-    //         assert_eq!(msg.sender.as_str(), "foobar");
-    //         assert_eq!(msg.receiver.as_str(), "foreign-address");
-    //     } else {
-    //         panic!("Unexpected return message: {:?}", res.messages[0]);
-    //     }
-
-    //     // reject with no funds
-    //     let msg = ExecuteMsg::Transfer(transfer.clone());
-    //     let info = mock_info("foobar", &[]);
-    //     let err = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
-    //     assert_eq!(err, ContractError::Payment(PaymentError::NoFunds {}));
-
-    //     // reject with multiple tokens funds
-    //     let msg = ExecuteMsg::Transfer(transfer.clone());
-    //     let info = mock_info("foobar", &[coin(1234567, "ucosm"), coin(54321, "uatom")]);
-    //     let err = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
-    //     assert_eq!(err, ContractError::Payment(PaymentError::MultipleDenoms {}));
-
-    //     // reject with bad channel id
-    //     transfer.channel = "channel-45".to_string();
-    //     let msg = ExecuteMsg::Transfer(transfer);
-    //     let info = mock_info("foobar", &coins(1234567, "ucosm"));
-    //     let err = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
-    //     assert_eq!(
-    //         err,
-    //         ContractError::NoSuchChannel {
-    //             id: "channel-45".to_string()
-    //         }
-    //     );
-    // }
 
     #[test]
     fn proper_checks_on_execute_cw20() {

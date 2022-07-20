@@ -1,3 +1,4 @@
+use cosmwasm_std::{IbcMsg, IbcPacketReceiveMsg};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -36,8 +37,8 @@ pub struct MigrateMsg {
 pub enum ExecuteMsg {
     /// This accepts a properly-encoded ReceiveMsg from a cw20 contract
     Receive(Cw20ReceiveMsg),
-    /// Unpacks the packet
-    HandlePacket(IcsGenericPacket),
+    // /// Unpacks the packet
+    // HandlePacket(IbcPacketReceiveMsg),
     /// This allows us to transfer *exactly one* native token
     // Transfer(TransferMsg),
     /// This must be called by gov_contract, will allow a new cw20 token to be sent
