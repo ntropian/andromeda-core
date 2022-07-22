@@ -1,11 +1,9 @@
-use cosmwasm_std::{IbcMsg, IbcPacketReceiveMsg};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cw20::Cw20ReceiveMsg;
 
 use crate::amount::Amount;
-use crate::ibc::IcsGenericPacket;
 use crate::state::ChannelInfo;
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]

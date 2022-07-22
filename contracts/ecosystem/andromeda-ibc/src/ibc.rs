@@ -70,7 +70,7 @@ impl IcsGenericPacket {
     pub fn new<T: Into<String>>(
         amount: Uint128,
         denom: T,
-        generic_data: Binary,
+        _generic_data: Binary,
         receiver: &str,
         sender: &str,
     ) -> Self {
@@ -432,7 +432,7 @@ mod test {
     use crate::contract::{execute, migrate, query_channel};
     use crate::msg::{ExecuteMsg, MigrateMsg, TransferMsg};
     use cosmwasm_std::testing::{mock_env, mock_info};
-    use cosmwasm_std::{coins, to_vec, IbcEndpoint, IbcMsg, IbcTimeout, Timestamp};
+    use cosmwasm_std::{to_vec, IbcEndpoint, IbcMsg, IbcTimeout, Timestamp};
     use cw20::Cw20ReceiveMsg;
 
     #[test]
@@ -482,15 +482,15 @@ mod test {
         msg
     }
 
-    fn native_payment(amount: u128, denom: &str, recipient: &str) -> SubMsg {
-        SubMsg::reply_on_error(
-            BankMsg::Send {
-                to_address: recipient.into(),
-                amount: coins(amount, denom),
-            },
-            RECEIVE_ID,
-        )
-    }
+    // fn native_payment(amount: u128, denom: &str, recipient: &str) -> SubMsg {
+    //     SubMsg::reply_on_error(
+    //         BankMsg::Send {
+    //             to_address: recipient.into(),
+    //             amount: coins(amount, denom),
+    //         },
+    //         RECEIVE_ID,
+    //     )
+    // }
 
     fn mock_receive_packet(
         my_channel: &str,
