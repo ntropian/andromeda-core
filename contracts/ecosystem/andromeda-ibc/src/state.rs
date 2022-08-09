@@ -5,8 +5,7 @@ use cosmwasm_std::{Addr, IbcEndpoint, StdResult, Storage, Uint128};
 use cw_controllers::Admin;
 use cw_storage_plus::{Item, Map};
 
-use crate::ContractError;
-
+use common::error::ContractError;
 pub const ADMIN: Admin = Admin::new("admin");
 
 pub const CONFIG: Item<Config> = Item::new("ics20_config");

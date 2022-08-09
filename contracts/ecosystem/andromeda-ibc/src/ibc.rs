@@ -9,11 +9,11 @@ use cosmwasm_std::{
 };
 
 use crate::amount::Amount;
-use crate::error::{ContractError, Never};
 use crate::state::{
     reduce_channel_balance, undo_reduce_channel_balance, ChannelInfo, ReplyArgs, ALLOW_LIST,
     CHANNEL_INFO, CONFIG, REPLY_ARGS,
 };
+use common::error::{ContractError, Never};
 use cw20::Cw20ExecuteMsg;
 
 pub const ICS20_VERSION: &str = "ics20-1";
@@ -219,7 +219,6 @@ pub fn ibc_channel_close(
     unimplemented!();
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
 /// Check to see if we have any balance here
 /// We should not return an error if possible, but rather an acknowledgement of failure
 pub fn ibc_packet_receive(

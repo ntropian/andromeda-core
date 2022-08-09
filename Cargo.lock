@@ -580,6 +580,7 @@ version = "0.1.0"
 dependencies = [
  "cosmwasm-std",
  "cw-asset",
+ "cw-controllers",
  "cw-storage-plus",
  "cw-utils",
  "cw20",
