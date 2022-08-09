@@ -1,10 +1,8 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use common::error::ContractError;
 use cosmwasm_std::{Coin, Uint128};
 use cw20::Cw20Coin;
-use std::convert::TryInto;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

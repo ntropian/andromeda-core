@@ -14,8 +14,9 @@ use crate::amount::Amount;
 use crate::ibc::{Ics20Ack, IcsGenericPacket};
 use crate::migrations::{v1, v2};
 use crate::msg::{
-    AllowMsg, AllowedInfo, AllowedResponse, ChannelResponse, ConfigResponse, ExecuteMsg, InitMsg,
-    ListAllowedResponse, ListChannelsResponse, MigrateMsg, PortResponse, QueryMsg, TransferMsg,
+    AllowMsg, AllowedInfo, AllowedResponse, ChannelResponse, ConfigResponse, ExecuteMsg,
+    InstantiateMsg, ListAllowedResponse, ListChannelsResponse, MigrateMsg, PortResponse, QueryMsg,
+    TransferMsg,
 };
 use common::error::{ContractError, Never};
 const RECEIVE_ID: u64 = 1337;
@@ -37,7 +38,7 @@ pub fn instantiate(
     mut deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    msg: InitMsg,
+    msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     let cfg = Config {
