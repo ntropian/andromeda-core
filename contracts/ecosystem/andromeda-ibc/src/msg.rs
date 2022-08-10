@@ -7,7 +7,7 @@ use crate::amount::Amount;
 use crate::state::ChannelInfo;
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub struct InstantiateMsg {
+pub struct InitMsg {
     /// Default timeout for ics20 packets, specified in seconds
     pub default_timeout: u64,
     /// who can allow more contracts
@@ -35,10 +35,8 @@ pub struct MigrateMsg {
 pub enum ExecuteMsg {
     /// This accepts a properly-encoded ReceiveMsg from a cw20 contract
     Receive(Cw20ReceiveMsg),
-    // /// Unpacks the packet
-    // HandlePacket(IbcPacketReceiveMsg),
     /// This allows us to transfer *exactly one* native token
-    // Transfer(TransferMsg),
+    Transfer(TransferMsg),
     /// This must be called by gov_contract, will allow a new cw20 token to be sent
     Allow(AllowMsg),
     /// Change the admin (must be called by current admin)

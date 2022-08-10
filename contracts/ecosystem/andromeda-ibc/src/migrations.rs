@@ -19,7 +19,7 @@ pub mod v1 {
 pub mod v2 {
     use crate::amount::Amount;
     use crate::state::{ChannelState, CHANNEL_INFO, CHANNEL_STATE};
-    use common::error::ContractError;
+    use crate::ContractError;
     use cosmwasm_std::{to_binary, Addr, DepsMut, Env, Order, StdResult, WasmQuery};
     use cw20::{BalanceResponse, Cw20QueryMsg};
 

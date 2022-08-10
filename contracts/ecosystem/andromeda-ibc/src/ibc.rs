@@ -9,11 +9,11 @@ use cosmwasm_std::{
 };
 
 use crate::amount::Amount;
+use crate::error::{ContractError, Never};
 use crate::state::{
     reduce_channel_balance, undo_reduce_channel_balance, ChannelInfo, ReplyArgs, ALLOW_LIST,
     CHANNEL_INFO, CONFIG, REPLY_ARGS,
 };
-use common::error::{ContractError, Never};
 use cw20::Cw20ExecuteMsg;
 
 pub const ICS20_VERSION: &str = "ics20-1";
@@ -39,45 +39,6 @@ impl Ics20Packet {
         Ics20Packet {
             denom: denom.into(),
             amount,
-            sender: sender.to_string(),
-            receiver: receiver.to_string(),
-        }
-    }
-
-    pub fn validate(&self) -> Result<(), ContractError> {
-        if self.amount.u128() > (u64::MAX as u128) {
-            Err(ContractError::AmountOverflow {})
-        } else {
-            Ok(())
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug, Default)]
-pub struct IcsGenericPacket {
-    /// amount of tokens to transfer is encoded as a string, but limited to u64 max
-    pub amount: Uint128,
-    /// the token denomination to be transferred
-    pub denom: String,
-    /// generic data
-    pub generic_data: Binary,
-    /// the recipient address on the destination chain
-    pub receiver: String,
-    /// the sender address
-    pub sender: String,
-}
-impl IcsGenericPacket {
-    pub fn new<T: Into<String>>(
-        amount: Uint128,
-        denom: T,
-        _generic_data: Binary,
-        receiver: &str,
-        sender: &str,
-    ) -> Self {
-        IcsGenericPacket {
-            amount,
-            denom: denom.into(),
-            generic_data: Binary::default(),
             sender: sender.to_string(),
             receiver: receiver.to_string(),
         }
@@ -219,6 +180,7 @@ pub fn ibc_channel_close(
     unimplemented!();
 }
 
+#[cfg_attr(not(feature = "library"), entry_point)]
 /// Check to see if we have any balance here
 /// We should not return an error if possible, but rather an acknowledgement of failure
 pub fn ibc_packet_receive(
@@ -431,7 +393,7 @@ mod test {
     use crate::contract::{execute, migrate, query_channel};
     use crate::msg::{ExecuteMsg, MigrateMsg, TransferMsg};
     use cosmwasm_std::testing::{mock_env, mock_info};
-    use cosmwasm_std::{to_vec, IbcEndpoint, IbcMsg, IbcTimeout, Timestamp};
+    use cosmwasm_std::{coins, to_vec, IbcEndpoint, IbcMsg, IbcTimeout, Timestamp};
     use cw20::Cw20ReceiveMsg;
 
     #[test]
@@ -481,15 +443,15 @@ mod test {
         msg
     }
 
-    // fn native_payment(amount: u128, denom: &str, recipient: &str) -> SubMsg {
-    //     SubMsg::reply_on_error(
-    //         BankMsg::Send {
-    //             to_address: recipient.into(),
-    //             amount: coins(amount, denom),
-    //         },
-    //         RECEIVE_ID,
-    //     )
-    // }
+    fn native_payment(amount: u128, denom: &str, recipient: &str) -> SubMsg {
+        SubMsg::reply_on_error(
+            BankMsg::Send {
+                to_address: recipient.into(),
+                amount: coins(amount, denom),
+            },
+            RECEIVE_ID,
+        )
+    }
 
     fn mock_receive_packet(
         my_channel: &str,
@@ -605,64 +567,64 @@ mod test {
         assert_eq!(state.total_sent, vec![Amount::cw20(987654321, cw20_addr)]);
     }
 
-    // #[test]
-    // fn send_receive_native() {
-    //     let send_channel = "channel-9";
-    //     let mut deps = setup(&["channel-1", "channel-7", send_channel], &[]);
+    #[test]
+    fn send_receive_native() {
+        let send_channel = "channel-9";
+        let mut deps = setup(&["channel-1", "channel-7", send_channel], &[]);
 
-    //     let denom = "uatom";
+        let denom = "uatom";
 
-    //     // prepare some mock packets
-    //     let recv_packet = mock_receive_packet(send_channel, 876543210, denom, "local-rcpt");
-    //     let recv_high_packet = mock_receive_packet(send_channel, 1876543210, denom, "local-rcpt");
+        // prepare some mock packets
+        let recv_packet = mock_receive_packet(send_channel, 876543210, denom, "local-rcpt");
+        let recv_high_packet = mock_receive_packet(send_channel, 1876543210, denom, "local-rcpt");
 
-    //     // cannot receive this denom yet
-    //     let msg = IbcPacketReceiveMsg::new(recv_packet.clone());
-    //     let res = ibc_packet_receive(deps.as_mut(), mock_env(), msg).unwrap();
-    //     assert!(res.messages.is_empty());
-    //     let ack: Ics20Ack = from_binary(&res.acknowledgement).unwrap();
-    //     let no_funds = Ics20Ack::Error(ContractError::InsufficientFunds {}.to_string());
-    //     assert_eq!(ack, no_funds);
+        // cannot receive this denom yet
+        let msg = IbcPacketReceiveMsg::new(recv_packet.clone());
+        let res = ibc_packet_receive(deps.as_mut(), mock_env(), msg).unwrap();
+        assert!(res.messages.is_empty());
+        let ack: Ics20Ack = from_binary(&res.acknowledgement).unwrap();
+        let no_funds = Ics20Ack::Error(ContractError::InsufficientFunds {}.to_string());
+        assert_eq!(ack, no_funds);
 
-    //     // we transfer some tokens
-    //     let msg = ExecuteMsg::Transfer(TransferMsg {
-    //         channel: send_channel.to_string(),
-    //         remote_address: "my-remote-address".to_string(),
-    //         timeout: None,
-    //     });
-    //     let info = mock_info("local-sender", &coins(987654321, denom));
-    //     execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+        // we transfer some tokens
+        let msg = ExecuteMsg::Transfer(TransferMsg {
+            channel: send_channel.to_string(),
+            remote_address: "my-remote-address".to_string(),
+            timeout: None,
+        });
+        let info = mock_info("local-sender", &coins(987654321, denom));
+        execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-    //     // query channel state|_|
-    //     let state = query_channel(deps.as_ref(), send_channel.to_string()).unwrap();
-    //     assert_eq!(state.balances, vec![Amount::native(987654321, denom)]);
-    //     assert_eq!(state.total_sent, vec![Amount::native(987654321, denom)]);
+        // query channel state|_|
+        let state = query_channel(deps.as_ref(), send_channel.to_string()).unwrap();
+        assert_eq!(state.balances, vec![Amount::native(987654321, denom)]);
+        assert_eq!(state.total_sent, vec![Amount::native(987654321, denom)]);
 
-    //     // cannot receive more than we sent
-    //     let msg = IbcPacketReceiveMsg::new(recv_high_packet);
-    //     let res = ibc_packet_receive(deps.as_mut(), mock_env(), msg).unwrap();
-    //     assert!(res.messages.is_empty());
-    //     let ack: Ics20Ack = from_binary(&res.acknowledgement).unwrap();
-    //     assert_eq!(ack, no_funds);
+        // cannot receive more than we sent
+        let msg = IbcPacketReceiveMsg::new(recv_high_packet);
+        let res = ibc_packet_receive(deps.as_mut(), mock_env(), msg).unwrap();
+        assert!(res.messages.is_empty());
+        let ack: Ics20Ack = from_binary(&res.acknowledgement).unwrap();
+        assert_eq!(ack, no_funds);
 
-    //     // we can receive less than we sent
-    //     let msg = IbcPacketReceiveMsg::new(recv_packet);
-    //     let res = ibc_packet_receive(deps.as_mut(), mock_env(), msg).unwrap();
-    //     assert_eq!(1, res.messages.len());
-    //     assert_eq!(
-    //         native_payment(876543210, denom, "local-rcpt"),
-    //         res.messages[0]
-    //     );
-    //     let ack: Ics20Ack = from_binary(&res.acknowledgement).unwrap();
-    //     assert!(matches!(ack, Ics20Ack::Result(_)));
+        // we can receive less than we sent
+        let msg = IbcPacketReceiveMsg::new(recv_packet);
+        let res = ibc_packet_receive(deps.as_mut(), mock_env(), msg).unwrap();
+        assert_eq!(1, res.messages.len());
+        assert_eq!(
+            native_payment(876543210, denom, "local-rcpt"),
+            res.messages[0]
+        );
+        let ack: Ics20Ack = from_binary(&res.acknowledgement).unwrap();
+        assert!(matches!(ack, Ics20Ack::Result(_)));
 
-    //     // only need to call reply block on error case
+        // only need to call reply block on error case
 
-    //     // query channel state
-    //     let state = query_channel(deps.as_ref(), send_channel.to_string()).unwrap();
-    //     assert_eq!(state.balances, vec![Amount::native(111111111, denom)]);
-    //     assert_eq!(state.total_sent, vec![Amount::native(987654321, denom)]);
-    // }
+        // query channel state
+        let state = query_channel(deps.as_ref(), send_channel.to_string()).unwrap();
+        assert_eq!(state.balances, vec![Amount::native(111111111, denom)]);
+        assert_eq!(state.total_sent, vec![Amount::native(987654321, denom)]);
+    }
 
     #[test]
     fn check_gas_limit_handles_all_cases() {

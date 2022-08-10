@@ -1,8 +1,10 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::error::ContractError;
 use cosmwasm_std::{Coin, Uint128};
 use cw20::Cw20Coin;
+use std::convert::TryInto;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -53,10 +55,10 @@ impl Amount {
         }
     }
 
-    // /// convert the amount into u64
-    // pub fn u64_amount(&self) -> Result<u64, ContractError> {
-    //     Ok(self.amount().u128().try_into()?)
-    // }
+    /// convert the amount into u64
+    pub fn u64_amount(&self) -> Result<u64, ContractError> {
+        Ok(self.amount().u128().try_into()?)
+    }
 
     pub fn is_empty(&self) -> bool {
         match self {
