@@ -2,11 +2,12 @@ use ado_base::ADOContract;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, IbcMsg, IbcQuery, MessageInfo, Order,
-    PortIdResponse, Response, StdError, StdResult,
+    from_binary, to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, IbcMsg, IbcQuery,
+    MessageInfo, Order, PortIdResponse, Response, StdError, StdResult, WasmMsg, BankMsg, coin
 };
 use semver::Version;
 
+use crate::error;
 use common::{
     ado_base::InstantiateMsg as BaseInstantiateMsg, encode_binary, error::ContractError, require,
     OrderBy,
@@ -15,21 +16,16 @@ use cw2::{get_contract_version, set_contract_version};
 use cw20::{Cw20Coin, Cw20ReceiveMsg};
 use cw_storage_plus::Bound;
 
-use crate::amount::Amount;
-use crate::ibc::Ics20Packet;
-use crate::migrations::{v1, v2};
-use crate::msg::{
-    AllowMsg, AllowedInfo, AllowedResponse, ChannelResponse, ConfigResponse, ExecuteMsg, InitMsg,
-    ListAllowedResponse, ListChannelsResponse, MigrateMsg, PortResponse, QueryMsg, TransferMsg,
-};
+use andromeda_ecosystem::ibc;
+
 use crate::state::{
     increase_channel_balance, AllowInfo, Config, ADMIN, ALLOW_LIST, CHANNEL_INFO, CHANNEL_STATE,
     CONFIG,
 };
-use cw_utils::{maybe_addr, nonpayable, one_coin};
+use cw_utils::{maybe_addr, nonpayable, one_coin,};
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:cw20-ics20";
+const CONTRACT_NAME: &str = "crates.io:andromeda-ibc";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -62,7 +58,7 @@ pub fn instantiate(
         deps.api,
         info,
         BaseInstantiateMsg {
-            ado_type: "auction".to_string(),
+            ado_type: "ibc".to_string(),
             operators: None,
             modules: None,
             primitive_contract: None,
@@ -78,6 +74,12 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
+        ExecuteMsg::AndrReceive(msg) => {
+            ADOContract::default().execute(deps, env, info, msg, execute)
+        }
+        ExecuteMsg::SendMessage { transfer_msg, msg } => {
+            execute_send_message(deps, env, info, transfer_msg, msg)
+        }
         ExecuteMsg::Receive(msg) => execute_receive(deps, env, info, msg),
         ExecuteMsg::Transfer(msg) => {
             let coin = one_coin(&info)?;
@@ -89,6 +91,83 @@ pub fn execute(
             Ok(ADMIN.execute_update_admin(deps, info, Some(admin))?)
         }
     }
+}
+
+fn execute_send_message(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    transfer_msg: TransferMsg,
+    msg: Binary,
+) -> Result<Response, ContractError> {
+    // Enough funds should be sent to cover the realyer costs
+    one_coin(&info)?;
+
+    // ensure the requested channel is registered
+    if !CHANNEL_INFO.has(deps.storage, &transfer_msg.channel) {
+        return Err(ContractError::NoSuchChannel {
+            id: transfer_msg.channel,
+        });
+    }
+    let config = CONFIG.load(deps.storage)?;
+
+    // if cw20 token, validate and ensure it is whitelisted, or we set default gas limit
+    if let Amount::Cw20(coin) = &amount {
+        let addr = deps.api.addr_validate(&coin.address)?;
+        // if limit is set, then we always allow cw20
+        if config.default_gas_limit.is_none() {
+            ALLOW_LIST
+                .may_load(deps.storage, &addr)?
+                .ok_or(ContractError::NotOnAllowList)?;
+        }
+    };
+
+    // delta from user is in seconds
+    let timeout_delta = match transfer_msg.timeout {
+        Some(t) => t,
+        None => config.default_timeout,
+    };
+    // timeout is in nanoseconds
+    let timeout = env.block.time.plus_seconds(timeout_delta);
+
+    let respone = Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Execute { contract_addr: transfer_msg.remote_address, msg: to_binary()), funds: info.funds }));
+
+    let packet = GenericPacket {
+        amount: info.funds[0].amount,
+        denom: info.funds[0].denom,
+        sender: info.sender,
+        receiver: transfer_msg.remote_address,
+        message: msg,
+    };
+    // prepare ibc message
+    let msg = IbcMsg::SendPacket {
+        channel_id: transfer_msg.channel,
+        data: to_binary(&packet)?,
+        timeout: timeout.into(),
+    };
+    let res = Response::new()
+        .add_message(msg)
+        .add_attribute("action", "Send Message")
+        .add_attribute("sender", &packet.sender)
+        .add_attribute("receiver", &packet.receiver)
+        .add_attribute("denom", &packet.denom)
+        .add_attribute("amount", &packet.amount.to_string());
+    Ok(res)
+}
+
+fn receive_msg(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    packet: GenericPacket,
+) -> Result<Response, ContractError> {
+    let response: Response = from_binary(packet.message)?;
+    Ok(response.add_message(CosmosMsg::Bank(BankMsg::Send { to_address: packet.receiver, amount: vec![coin(packet.amount, packet.denom)] })));
+    Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: "address".to_string(),
+        msg: to_binary("data")?,
+        funds: &[],
+    }));
 }
 
 pub fn execute_receive(

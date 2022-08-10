@@ -1,20 +1,232 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use common::error::ContractError;
+use cosmwasm_std::{Coin, Uint128};
+use cw20::Cw20Coin;
+
+use std::convert::TryInto;
+
 use cosmwasm_std::{
     attr, entry_point, from_binary, to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env,
     IbcBasicResponse, IbcChannel, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg,
     IbcEndpoint, IbcOrder, IbcPacket, IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg,
-    IbcReceiveResponse, Reply, Response, SubMsg, SubMsgResult, Uint128, WasmMsg,
+    IbcReceiveResponse, Reply, Response, SubMsg, SubMsgResult, WasmMsg,
 };
 
-use crate::amount::Amount;
-use crate::error::{ContractError, Never};
-use crate::state::{
-    reduce_channel_balance, undo_reduce_channel_balance, ChannelInfo, ReplyArgs, ALLOW_LIST,
-    CHANNEL_INFO, CONFIG, REPLY_ARGS,
-};
 use cw20::Cw20ExecuteMsg;
+
+
+use cw20::Cw20ReceiveMsg;
+
+
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+pub struct InitMsg {
+    /// Default timeout for ics20 packets, specified in seconds
+    pub default_timeout: u64,
+    /// who can allow more contracts
+    pub gov_contract: String,
+    /// initial allowlist - all cw20 tokens we will send must be previously allowed by governance
+    pub allowlist: Vec<AllowMsg>,
+    /// If set, contracts off the allowlist will run with this gas limit.
+    /// If unset, will refuse to accept any contract off the allow list.
+    pub default_gas_limit: Option<u64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct AllowMsg {
+    pub contract: String,
+    pub gas_limit: Option<u64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+pub struct MigrateMsg {
+    pub default_gas_limit: Option<u64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ExecuteMsg {
+    AndrReceive(AndromedaMsg),
+    /// This accepts a properly-encoded ReceiveMsg from a cw20 contract
+    Receive(Cw20ReceiveMsg),
+    /// Sends message to another contract
+    SendMessage {transfer_msg: TransferMsg, msg: Binary}
+    /// This allows us to transfer *exactly one* native token
+    Transfer(TransferMsg),
+    /// This must be called by gov_contract, will allow a new cw20 token to be sent
+    Allow(AllowMsg),
+    /// Change the admin (must be called by current admin)
+    UpdateAdmin {
+        admin: String,
+    },
+}
+
+/// This is the message we accept via Receive
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct TransferMsg {
+    /// The local channel to send the packets on
+    pub channel: String,
+    /// The remote address to send to.
+    /// Don't use HumanAddress as this will likely have a different Bech32 prefix than we use
+    /// and cannot be validated locally
+    pub remote_address: String,
+    /// How long the packet lives in seconds. If not specified, use default_timeout
+    pub timeout: Option<u64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum QueryMsg {
+    /// Return the port ID bound by this contract. Returns PortResponse
+    Port {},
+    /// Show all channels we have connected to. Return type is ListChannelsResponse.
+    ListChannels {},
+    /// Returns the details of the name channel, error if not created.
+    /// Return type: ChannelResponse.
+    Channel { id: String },
+    /// Show the Config. Returns ConfigResponse (currently including admin as well)
+    Config {},
+    /// Return AdminResponse
+    Admin {},
+    /// Query if a given cw20 contract is allowed. Returns AllowedResponse
+    Allowed { contract: String },
+    /// List all allowed cw20 contracts. Returns ListAllowedResponse
+    ListAllowed {
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct ListChannelsResponse {
+    pub channels: Vec<ChannelInfo>,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct ChannelResponse {
+    /// Information on the channel's connection
+    pub info: ChannelInfo,
+    /// How many tokens we currently have pending over this channel
+    pub balances: Vec<Amount>,
+    /// The total number of tokens that have been sent over this channel
+    /// (even if many have been returned, so balance is low)
+    pub total_sent: Vec<Amount>,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct PortResponse {
+    pub port_id: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct ConfigResponse {
+    pub default_timeout: u64,
+    pub default_gas_limit: Option<u64>,
+    pub gov_contract: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct AllowedResponse {
+    pub is_allowed: bool,
+    pub gas_limit: Option<u64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct ListAllowedResponse {
+    pub allow: Vec<AllowedInfo>,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct AllowedInfo {
+    pub contract: String,
+    pub gas_limit: Option<u64>,
+}
+
+// v1 format is anything older than 0.12.0
+pub mod v1 {
+    use schemars::JsonSchema;
+    use serde::{Deserialize, Serialize};
+
+    use cosmwasm_std::Addr;
+    use cw_storage_plus::Item;
+
+    #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+    pub struct Config {
+        pub default_timeout: u64,
+        pub gov_contract: Addr,
+    }
+
+    pub const CONFIG: Item<Config> = Item::new("ics20_config");
+}
+
+// v2 format is anything older than 0.13.1 when we only updated the internal balances on success ack
+pub mod v2 {
+    use cosmwasm_std::{to_binary, Addr, DepsMut, Env, Order, StdResult, WasmQuery};
+    use cw20::{BalanceResponse, Cw20QueryMsg};
+
+    pub fn update_balances(mut deps: DepsMut, env: &Env) -> Result<(), ContractError> {
+        let channels = CHANNEL_INFO
+            .keys(deps.storage, None, None, Order::Ascending)
+            .collect::<StdResult<Vec<_>>>()?;
+        match channels.len() {
+            0 => Ok(()),
+            1 => {
+                let channel = &channels[0];
+                let addr = &env.contract.address;
+                let states = CHANNEL_STATE
+                    .prefix(channel)
+                    .range(deps.storage, None, None, Order::Ascending)
+                    .collect::<StdResult<Vec<_>>>()?;
+                for (denom, state) in states.into_iter() {
+                    update_denom(deps.branch(), addr, channel, denom, state)?;
+                }
+                Ok(())
+            }
+            _ => Err(ContractError::CannotMigrate {
+                previous_contract: "multiple channels open".into(),
+            }),
+        }
+    }
+
+    fn update_denom(
+        deps: DepsMut,
+        contract: &Addr,
+        channel: &str,
+        denom: String,
+        mut state: ChannelState,
+    ) -> StdResult<()> {
+        // handle this for both native and cw20
+        let balance = match Amount::from_parts(denom.clone(), state.outstanding) {
+            Amount::Native(coin) => deps.querier.query_balance(contract, coin.denom)?.amount,
+            Amount::Cw20(coin) => {
+                // FIXME: we should be able to do this with the following line, but QuerierWrapper doesn't play
+                // with the Querier generics
+                // `Cw20Contract(contract.clone()).balance(&deps.querier, contract)?`
+                let query = WasmQuery::Smart {
+                    contract_addr: coin.address,
+                    msg: to_binary(&Cw20QueryMsg::Balance {
+                        address: contract.into(),
+                    })?,
+                };
+                let res: BalanceResponse = deps.querier.query(&query.into())?;
+                res.balance
+            }
+        };
+
+        // this checks if we have received some coins that are "in flight" and not yet accounted in the state
+        let diff = balance - state.outstanding;
+        // if they are in flight, we add them to the internal state now, as if we added them when sent (not when acked)
+        // to match the current logic
+        if !diff.is_zero() {
+            state.outstanding += diff;
+            state.total_sent += diff;
+            CHANNEL_STATE.save(deps.storage, (channel, &denom), &state)?;
+        }
+
+        Ok(())
+    }
+}
 
 pub const ICS20_VERSION: &str = "ics20-1";
 pub const ICS20_ORDERING: IbcOrder = IbcOrder::Unordered;
@@ -22,6 +234,21 @@ pub const ICS20_ORDERING: IbcOrder = IbcOrder::Unordered;
 /// The format for sending an ics20 packet.
 /// Proto defined here: https://github.com/cosmos/cosmos-sdk/blob/v0.42.0/proto/ibc/applications/transfer/v1/transfer.proto#L11-L20
 /// This is compatible with the JSON serialization
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug, Default)]
+pub struct GenericPacket {
+    /// amount of tokens to transfer is encoded as a string, but limited to u64 max
+    pub amount: Uint128,
+    /// the token denomination to be transferred
+    pub denom: String,
+    /// the recipient address on the destination chain
+    pub receiver: String,
+    /// the sender address
+    pub sender: String,
+    /// the message
+    pub message: Binary,
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug, Default)]
 pub struct Ics20Packet {
     /// amount of tokens to transfer is encoded as a string, but limited to u64 max
@@ -659,5 +886,67 @@ mod test {
         // non-allow list will now get default
         let limit = check_gas_limit(deps.as_ref(), &Amount::cw20(500, random)).unwrap();
         assert_eq!(limit, Some(def_limit));
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Amount {
+    Native(Coin),
+    // FIXME? USe Cw20CoinVerified, and validate cw20 addresses
+    Cw20(Cw20Coin),
+}
+
+impl Amount {
+    // TODO: write test for this
+    pub fn from_parts(denom: String, amount: Uint128) -> Self {
+        if denom.starts_with("cw20:") {
+            let address = denom.get(5..).unwrap().into();
+            Amount::Cw20(Cw20Coin { address, amount })
+        } else {
+            Amount::Native(Coin { denom, amount })
+        }
+    }
+
+    pub fn cw20(amount: u128, addr: &str) -> Self {
+        Amount::Cw20(Cw20Coin {
+            address: addr.into(),
+            amount: Uint128::new(amount),
+        })
+    }
+
+    pub fn native(amount: u128, denom: &str) -> Self {
+        Amount::Native(Coin {
+            denom: denom.to_string(),
+            amount: Uint128::new(amount),
+        })
+    }
+}
+
+impl Amount {
+    pub fn denom(&self) -> String {
+        match self {
+            Amount::Native(c) => c.denom.clone(),
+            Amount::Cw20(c) => format!("cw20:{}", c.address.as_str()),
+        }
+    }
+
+    pub fn amount(&self) -> Uint128 {
+        match self {
+            Amount::Native(c) => c.amount,
+            Amount::Cw20(c) => c.amount,
+        }
+    }
+
+    /// convert the amount into u64
+    pub fn u64_amount(&self) -> Result<u64, ContractError> {
+        Ok(self.amount().u128().try_into()?)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Amount::Native(c) => c.amount.is_zero(),
+            Amount::Cw20(c) => c.amount.is_zero(),
+        }
     }
 }

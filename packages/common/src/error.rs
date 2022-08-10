@@ -525,3 +525,8 @@ impl From<TryFromIntError> for ContractError {
         ContractError::AmountOverflow {}
     }
 }
+// impl From<PaymentError> for ContractError {
+//     fn from(_: PaymentError) -> Self {
+//         ContractError::Payment("Payment Error")
+//     }
+// }
