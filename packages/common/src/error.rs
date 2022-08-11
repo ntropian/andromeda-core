@@ -4,7 +4,7 @@ use cw721_base::ContractError as Cw721ContractError;
 use cw_controllers::AdminError;
 use cw_utils::{Expiration, ParseReplyError, PaymentError};
 use std::convert::From;
-use std::num::TryFromIntError;
+// use std::num::TryFromIntError;
 use std::string::FromUtf8Error;
 use thiserror::Error;
 
@@ -520,13 +520,13 @@ impl From<OverflowError> for ContractError {
     }
 }
 
-impl From<TryFromIntError> for ContractError {
-    fn from(_: TryFromIntError) -> Self {
-        ContractError::AmountOverflow {}
-    }
-}
-// impl From<PaymentError> for ContractError {
-//     fn from(_: PaymentError) -> Self {
-//         ContractError::Payment("Payment Error")
+// impl From<TryFromIntError> for ContractError {
+//     fn from(_: TryFromIntError) -> Self {
+//         ContractError::AmountOverflow {}
+//     }
+// }
+// impl FromResidual<Result<Infallible, PaymentError>> for ContractError {
+//     fn from(_: FromResidualErr) -> Self {
+//         ContractError
 //     }
 // }
