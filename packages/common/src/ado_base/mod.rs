@@ -13,7 +13,7 @@ use cosmwasm_std::{to_binary, Binary, QuerierWrapper, QueryRequest, Uint64, Wasm
 use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema, Debug)]
 pub struct InstantiateMsg {
     pub ado_type: String,
     pub operators: Option<Vec<String>>,
