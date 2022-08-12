@@ -10,7 +10,7 @@ pub struct Withdrawal {
     pub withdrawal_type: Option<WithdrawalType>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum WithdrawalType {
     Amount(Uint128),
