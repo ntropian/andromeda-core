@@ -17,8 +17,9 @@ use crate::error::ContractError;
 use crate::ibc::Ics20Packet;
 use crate::migrations::{v1, v2};
 use crate::msg::{
-    AllowMsg, AllowedInfo, AllowedResponse, ChannelResponse, ConfigResponse, ExecuteMsg, InitMsg,
-    ListAllowedResponse, ListChannelsResponse, MigrateMsg, PortResponse, QueryMsg, TransferMsg,
+    AllowMsg, AllowedInfo, AllowedResponse, ChannelResponse, ConfigResponse, ExecuteMsg,
+    InstantiateMsg, ListAllowedResponse, ListChannelsResponse, MigrateMsg, PortResponse, QueryMsg,
+    TransferMsg,
 };
 use crate::state::{
     increase_channel_balance, AllowInfo, Config, ADMIN, ALLOW_LIST, CHANNEL_INFO, CHANNEL_STATE,
@@ -35,7 +36,7 @@ pub fn instantiate(
     mut deps: DepsMut,
     _senv: Env,
     info: MessageInfo,
-    msg: InitMsg,
+    msg: InstantiateMsg,
 ) -> Result<Response, common::error::ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     let cfg = Config {

@@ -7,7 +7,7 @@ use crate::amount::Amount;
 use crate::state::ChannelInfo;
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub struct InitMsg {
+pub struct InstantiateMsg {
     /// Default timeout for ics20 packets, specified in seconds
     pub default_timeout: u64,
     /// who can allow more contracts
