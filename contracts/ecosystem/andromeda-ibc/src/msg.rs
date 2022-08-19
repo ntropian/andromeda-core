@@ -1,3 +1,4 @@
+use cosmwasm_std::IbcPacket;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -37,6 +38,8 @@ pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg),
     /// This allows us to transfer *exactly one* native token
     Transfer(TransferMsg),
+    /// This sends the token to the recipient
+    HandlePacket(IbcPacket),
     /// This must be called by gov_contract, will allow a new cw20 token to be sent
     Allow(AllowMsg),
     /// Change the admin (must be called by current admin)

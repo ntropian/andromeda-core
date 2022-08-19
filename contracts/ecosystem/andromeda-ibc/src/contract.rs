@@ -2,8 +2,8 @@ use ado_base::ADOContract;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, IbcMsg, IbcQuery, MessageInfo, Order,
-    PortIdResponse, Response, StdError, StdResult,
+    coin, from_binary, to_binary, Addr, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, IbcMsg,
+    IbcPacket, IbcQuery, MessageInfo, Order, PortIdResponse, Response, StdError, StdResult,
 };
 use semver::Version;
 
@@ -83,12 +83,31 @@ pub fn execute(
             let coin = one_coin(&info)?;
             execute_transfer(deps, env, msg, Amount::Native(coin), info.sender)
         }
+        ExecuteMsg::HandlePacket(packet) => execute_ibc_msg(deps, env, info, packet),
         ExecuteMsg::Allow(allow) => execute_allow(deps, env, info, allow),
         ExecuteMsg::UpdateAdmin { admin } => {
             let admin = deps.api.addr_validate(&admin)?;
             Ok(ADMIN.execute_update_admin(deps, info, Some(admin))?)
         }
     }
+}
+
+pub fn execute_ibc_msg(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    packet: IbcPacket,
+) -> Result<Response, ContractError> {
+    let packet_data: Ics20Packet = from_binary(&packet.data)?;
+    let recipient = packet_data.receiver;
+    let amount = packet_data.amount;
+    let denom = packet_data.denom;
+    let ibc_token = coin(u128::from(amount), denom);
+
+    Ok(Response::new().add_message(CosmosMsg::Bank(BankMsg::Send {
+        to_address: recipient,
+        amount: vec![ibc_token],
+    })))
 }
 
 pub fn execute_receive(
