@@ -337,7 +337,7 @@ fn execute_update_strategy(
     address: AndrAddress,
 ) -> Result<Response, ContractError> {
     require(
-        ADOContract::default().is_contract_owner(deps.storage, &info.sender.to_string())?,
+        ADOContract::default().is_contract_owner(deps.storage, info.sender.as_ref())?,
         ContractError::Unauthorized {},
     )?;
     let app_contract = ADOContract::default().get_app_contract(deps.storage)?;
@@ -427,7 +427,7 @@ fn query_balance(
                 to_binary(&address)?,
             ))))?,
         });
-        match deps.querier.raw_query(&to_binary(&query)?.to_vec()) {
+        match deps.querier.raw_query(&to_binary(&query)?) {
             SystemResult::Ok(ContractResult::Ok(value)) => Ok(value),
             _ => Err(ContractError::InvalidQuery {}),
         }

@@ -1,4 +1,3 @@
-use cosmwasm_std::IbcPacket;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -20,7 +19,7 @@ pub struct InstantiateMsg {
     pub default_gas_limit: Option<u64>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct AllowMsg {
     pub contract: String,
     pub gas_limit: Option<u64>,
@@ -39,7 +38,7 @@ pub enum ExecuteMsg {
     /// This allows us to transfer *exactly one* native token
     Transfer(TransferMsg),
     /// This sends the token to the recipient
-    HandlePacket(IbcPacket),
+    // HandlePacket(IbcPacket),
     /// This must be called by gov_contract, will allow a new cw20 token to be sent
     Allow(AllowMsg),
     /// Change the admin (must be called by current admin)
@@ -47,7 +46,7 @@ pub enum ExecuteMsg {
 }
 
 /// This is the message we accept via Receive
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct TransferMsg {
     /// The local channel to send the packets on
     pub channel: String,
@@ -59,7 +58,7 @@ pub struct TransferMsg {
     pub timeout: Option<u64>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     /// Return the port ID bound by this contract. Returns PortResponse
@@ -98,30 +97,30 @@ pub struct ChannelResponse {
     pub total_sent: Vec<Amount>,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema, Debug)]
 pub struct PortResponse {
     pub port_id: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema, Debug)]
 pub struct ConfigResponse {
     pub default_timeout: u64,
     pub default_gas_limit: Option<u64>,
     pub gov_contract: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema, Debug)]
 pub struct AllowedResponse {
     pub is_allowed: bool,
     pub gas_limit: Option<u64>,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema, Debug)]
 pub struct ListAllowedResponse {
     pub allow: Vec<AllowedInfo>,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema, Debug)]
 pub struct AllowedInfo {
     pub contract: String,
     pub gas_limit: Option<u64>,

@@ -6,7 +6,7 @@ pub mod v1 {
     use cosmwasm_std::Addr;
     use cw_storage_plus::Item;
 
-    #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+    #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema, Debug)]
     pub struct Config {
         pub default_timeout: u64,
         pub gov_contract: Addr,
