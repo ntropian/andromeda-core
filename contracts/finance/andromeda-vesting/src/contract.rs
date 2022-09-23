@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     ensure, Binary, Coin, CosmosMsg, Deps, DepsMut, DistributionMsg, Env, GovMsg, MessageInfo,
-    QuerierWrapper, Response, StakingMsg, StdError, Uint128, VoteOption,
+    QuerierWrapper, Response, StakingMsg, StdError, Uint128, VoteOption, Storage, Api,
 };
 use cw2::{get_contract_version, set_contract_version};
 use cw_asset::AssetInfo;
@@ -194,14 +194,14 @@ fn execute_claim(
     number_of_claims: Option<u64>,
     batch_id: u64,
 ) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+
     let contract = ADOContract::default();
-    // Should this be owner or recipient?
     ensure!(
-        contract.is_contract_owner(deps.storage, info.sender.as_str())?,
+        // Either the contract owner or the recipient itself can claim
+        is_contract_owner_or_recipient(deps.storage, deps.api, &deps.querier, &info.sender.to_string())?,
         ContractError::Unauthorized {}
     );
-
-    let config = CONFIG.load(deps.storage)?;
 
     // If it doesn't exist, error will be returned to user.
     let key = batches().key(batch_id);
@@ -281,7 +281,7 @@ fn execute_claim_all(
     let mut msgs = vec![];
 
     // Don't want to error here since there will generally be other batches that will have
-    // claimable amounts. Erroring for one would make the whole transaction fai.
+    // claimable amounts. Erroring for one would make the whole transaction fail.
     if !total_amount_to_send.is_zero() {
         let config = CONFIG.load(deps.storage)?;
         let app_contract = contract.get_app_contract(deps.storage)?;
@@ -307,7 +307,7 @@ fn execute_delegate(
 ) -> Result<Response, ContractError> {
     let sender = info.sender.to_string();
     ensure!(
-        ADOContract::default().is_contract_owner(deps.storage, &sender)?,
+        is_contract_owner_or_recipient(deps.storage, deps.api, &deps.querier, &info.sender.to_string())?,
         ContractError::Unauthorized {}
     );
     let config = CONFIG.load(deps.storage)?;
@@ -343,7 +343,7 @@ fn execute_redelegate(
 ) -> Result<Response, ContractError> {
     let sender = info.sender.to_string();
     ensure!(
-        ADOContract::default().is_contract_owner(deps.storage, &sender)?,
+        is_contract_owner_or_recipient(deps.storage, deps.api, &deps.querier, &info.sender.to_string())?,
         ContractError::Unauthorized {}
     );
     let config = CONFIG.load(deps.storage)?;
@@ -383,7 +383,7 @@ fn execute_undelegate(
 ) -> Result<Response, ContractError> {
     let sender = info.sender.to_string();
     ensure!(
-        ADOContract::default().is_contract_owner(deps.storage, &sender)?,
+        is_contract_owner_or_recipient(deps.storage, deps.api, &deps.querier, &info.sender.to_string())?,
         ContractError::Unauthorized {}
     );
     let config = CONFIG.load(deps.storage)?;
@@ -421,7 +421,7 @@ fn execute_withdraw_rewards(
 
     let sender = info.sender.to_string();
     ensure!(
-        ADOContract::default().is_contract_owner(deps.storage, &sender)?,
+        is_contract_owner_or_recipient(deps.storage, deps.api, &deps.querier, &info.sender.to_string())?,
         ContractError::Unauthorized {}
     );
     let withdraw_rewards_msgs: Vec<CosmosMsg> = deps
@@ -488,7 +488,7 @@ fn execute_vote(
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
     ensure!(
-        ADOContract::default().is_contract_owner(deps.storage, info.sender.as_str())?,
+        is_contract_owner_or_recipient(deps.storage, deps.api, &deps.querier, &info.sender.to_string())?,
         ContractError::Unauthorized {}
     );
     let msg: CosmosMsg = CosmosMsg::Gov(GovMsg::Vote {
@@ -516,6 +516,15 @@ fn get_amount_delegated(
 
 fn get_set_withdraw_address_msg(address: String) -> CosmosMsg {
     CosmosMsg::Distribution(DistributionMsg::SetWithdrawAddress { address })
+}
+
+fn is_contract_owner_or_recipient(storage: &mut dyn Storage, api: &dyn Api, querier: &QuerierWrapper, sender: &String) -> Result<bool, ContractError> {
+    let contract = ADOContract::default();
+    let config = CONFIG.load(storage)?;
+    let app_contract = contract.get_app_contract(storage)?;
+
+    let recipient_addr = config.recipient.get_addr(api, &querier, app_contract)?;
+    Ok(contract.is_contract_owner(storage, sender.as_str())? || recipient_addr.eq(&sender.to_string()))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

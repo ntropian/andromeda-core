@@ -427,6 +427,68 @@ fn test_claim_batch_unauthorized() {
 }
 
 #[test]
+fn test_claim_batch_as_recipient() {
+    let mut deps = mock_dependencies();
+    init(deps.as_mut());
+    let info = mock_info("owner", &coins(14, "uusd"));
+
+    let release_unit = 10;
+
+    // Create batch.
+    let msg = ExecuteMsg::CreateBatch {
+        lockup_duration: None,
+        release_unit,
+        release_amount: WithdrawalType::Amount(Uint128::new(10)),
+        validator_to_delegate_to: None,
+    };
+
+    let _res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+    deps.querier
+        .update_balance(MOCK_CONTRACT_ADDR, coins(14, "uusd"));
+
+    // Skip time.
+    let mut env = mock_env();
+    // Two releases are out.
+    env.block.time = env.block.time.plus_seconds(2 * release_unit);
+
+    // Claim batch.
+    let msg = ExecuteMsg::Claim {
+        number_of_claims: None,
+        batch_id: 1,
+    };
+    let recipient_info = mock_info("recipient", &[]);
+
+    let res = execute(deps.as_mut(), env, recipient_info, msg).unwrap();
+
+    assert_eq!(
+        Response::new()
+            .add_message(BankMsg::Send {
+                to_address: "recipient".to_string(),
+                amount: coins(14, "uusd")
+            })
+            .add_attribute("action", "claim")
+            .add_attribute("amount", "14")
+            .add_attribute("batch_id", "1")
+            .add_attribute("amount_left", "0"),
+        res
+    );
+    let lockup_end = mock_env().block.time.seconds();
+
+    assert_eq!(
+        Batch {
+            amount: Uint128::new(14),
+            amount_claimed: Uint128::new(14),
+            lockup_end,
+            release_unit: 10,
+            release_amount: WithdrawalType::Amount(Uint128::new(10)),
+            last_claimed_release_time: lockup_end + 2 * release_unit,
+        },
+        batches().load(deps.as_ref().storage, 1u64).unwrap()
+    );
+}
+
+#[test]
 fn test_claim_batch_still_locked() {
     let mut deps = mock_dependencies();
     init(deps.as_mut());
