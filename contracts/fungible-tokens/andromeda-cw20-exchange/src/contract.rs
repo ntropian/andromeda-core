@@ -9,13 +9,13 @@ use common::{
     // parse_message,
 };
 use cosmwasm_std::{
-    attr, ensure, entry_point, from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env,
-    MessageInfo, Reply, Response, StdError, Uint128,
+    attr, coin, ensure, entry_point, from_binary, to_binary, wasm_execute, Addr, BankMsg, Binary,
+    CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, SubMsg, Uint128,
 };
 use cw2::{get_contract_version, set_contract_version};
-use cw20::Cw20ReceiveMsg;
+use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use cw_asset::AssetInfo;
-use cw_utils::one_coin;
+use cw_utils::{nonpayable, one_coin};
 use semver::Version;
 
 use crate::state::{SALE, TOKEN_ADDRESS};
@@ -29,6 +29,9 @@ pub struct ExecuteEnv<'a> {
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:andromeda-cw20-exchange";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+const REFUND_REPLY_ID: u64 = 1;
+const PURCHASE_REPLY_ID: u64 = 2;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -92,25 +95,30 @@ pub fn execute_receive(
     execute_env: ExecuteEnv,
     receive_msg: Cw20ReceiveMsg,
 ) -> Result<Response, ContractError> {
-    let sent_asset = AssetInfo::Cw20(execute_env.info.sender.clone());
+    nonpayable(&execute_env.info)?;
+
+    let asset_sent = AssetInfo::Cw20(execute_env.info.sender.clone());
     let amount_sent = receive_msg.amount;
+    let sender = receive_msg.sender;
+
+    ensure!(
+        !amount_sent.is_zero(),
+        ContractError::InvalidFunds {
+            msg: "Cannot send a 0 amount".to_string()
+        }
+    );
 
     match from_binary(&receive_msg.msg)? {
         Cw20HookMsg::StartSale {
             asset,
             exchange_rate,
-        } => execute_start_sale(
-            execute_env,
-            amount_sent,
-            asset,
-            exchange_rate,
-            receive_msg.sender,
-        ),
+        } => execute_start_sale(execute_env, amount_sent, asset, exchange_rate, sender),
         Cw20HookMsg::Purchase { recipient } => execute_purchase(
             execute_env,
             amount_sent,
-            sent_asset,
-            recipient.unwrap_or(receive_msg.sender).as_str(),
+            asset_sent,
+            recipient.unwrap_or(sender.to_string()).as_str(),
+            &sender,
         ),
     }
 }
@@ -163,11 +171,85 @@ pub fn execute_purchase(
     amount_sent: Uint128,
     asset_sent: AssetInfo,
     recipient: &str,
+    // For refund purposes
+    sender: &str,
 ) -> Result<Response, ContractError> {
     execute_env.deps.api.addr_validate(recipient)?;
-    let resp = Response::default();
+    let mut resp = Response::default();
 
-    Ok(resp)
+    let Some(sale) = SALE.may_load(execute_env.deps.storage, asset_sent.to_string())? else {
+        return Err(ContractError::NoOngoingSale {  })
+    };
+
+    let purchased = amount_sent.clone().checked_div(sale.exchange_rate).unwrap();
+    let remainder = amount_sent.clone().checked_sub(purchased)?;
+
+    ensure!(
+        !purchased.is_zero(),
+        ContractError::InvalidFunds {
+            msg: "Not enough funds sent to purchase a token".to_string()
+        }
+    );
+    ensure!(sale.amount >= purchased, ContractError::NotEnoughTokens {});
+
+    // If purchase was rounded down return funds to purchaser
+    if !remainder.is_zero() {
+        match asset_sent.clone() {
+            AssetInfo::Native(denom) => {
+                let bank_msg = BankMsg::Send {
+                    to_address: sender.to_string(),
+                    amount: vec![coin(remainder.u128(), denom)],
+                };
+
+                resp = resp
+                    .add_message(CosmosMsg::Bank(bank_msg))
+                    .add_attributes(vec![attr("refunded_amount", remainder)]);
+            }
+            AssetInfo::Cw20(addr) => {
+                let transfer_msg = Cw20ExecuteMsg::Transfer {
+                    recipient: sender.to_string(),
+                    amount: remainder,
+                };
+                let wasm_msg = wasm_execute(addr, &transfer_msg, vec![])?;
+                resp = resp
+                    .add_submessage(SubMsg::reply_on_error(
+                        CosmosMsg::Wasm(wasm_msg),
+                        REFUND_REPLY_ID,
+                    ))
+                    .add_attributes(vec![attr("refunded_amount", remainder)]);
+            }
+            _ => {
+                return Err(ContractError::InvalidAsset {
+                    asset: asset_sent.to_string(),
+                })
+            }
+        }
+    }
+
+    // Transfer tokens to purchaser recipient
+    let token_addr = TOKEN_ADDRESS.load(execute_env.deps.storage)?.get_address(
+        execute_env.deps.api,
+        &execute_env.deps.querier,
+        ADOContract::default().get_app_contract(execute_env.deps.storage)?,
+    )?;
+    let transfer_msg = Cw20ExecuteMsg::Transfer {
+        recipient: recipient.to_string(),
+        amount: purchased,
+    };
+    let wasm_msg = wasm_execute(token_addr, &transfer_msg, vec![])?;
+    resp = resp.add_submessage(SubMsg::reply_on_error(
+        CosmosMsg::Wasm(wasm_msg),
+        PURCHASE_REPLY_ID,
+    ));
+
+    Ok(resp.add_attributes(vec![
+        attr("action", "purchase"),
+        attr("purchaser", sender),
+        attr("recipient", recipient),
+        attr("amount", purchased),
+        attr("purchase_asset", asset_sent.to_string()),
+        attr("purchase_asset_amount_send", amount_sent),
+    ]))
 }
 
 pub fn execute_purchase_native(
@@ -177,6 +259,7 @@ pub fn execute_purchase_native(
     // Default to sender as recipient
     let recipient = recipient.unwrap_or(execute_env.info.sender.to_string());
     execute_env.deps.api.addr_validate(&recipient)?;
+    let sender = execute_env.info.sender.to_string();
 
     // Only allow one coin for purchasing
     one_coin(&execute_env.info)?;
@@ -185,7 +268,7 @@ pub fn execute_purchase_native(
     let asset = AssetInfo::Native(payment.denom.to_string());
     let amount = payment.amount;
 
-    execute_purchase(execute_env, amount, asset, &recipient)
+    execute_purchase(execute_env, amount, asset, &recipient, &sender)
 }
 
 pub fn execute_cancel_sale(

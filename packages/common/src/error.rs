@@ -484,6 +484,9 @@ pub enum ContractError {
 
     #[error("Invalid Expiration Time")]
     InvalidExpirationTime {},
+
+    #[error("Not enough tokens left on sale")]
+    NotEnoughTokens {},
 }
 
 impl From<Cw20ContractError> for ContractError {
