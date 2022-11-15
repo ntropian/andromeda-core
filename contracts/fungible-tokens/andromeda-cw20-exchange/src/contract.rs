@@ -149,14 +149,14 @@ pub fn execute_start_sale(
     );
 
     // Do not allow duplicate sales
-    let current_sale = SALE.may_load(execute_env.deps.storage, asset.to_string())?;
+    let current_sale = SALE.may_load(execute_env.deps.storage, &asset.to_string())?;
     ensure!(current_sale.is_none(), ContractError::SaleNotEnded {});
 
     let sale = Sale {
         amount,
         exchange_rate,
     };
-    SALE.save(execute_env.deps.storage, asset.to_string(), &sale)?;
+    SALE.save(execute_env.deps.storage, &asset.to_string(), &sale)?;
 
     Ok(Response::default().add_attributes(vec![
         attr("action", "start_sale"),
@@ -177,7 +177,7 @@ pub fn execute_purchase(
     execute_env.deps.api.addr_validate(recipient)?;
     let mut resp = Response::default();
 
-    let Some(sale) = SALE.may_load(execute_env.deps.storage, asset_sent.to_string())? else {
+    let Some(sale) = SALE.may_load(execute_env.deps.storage, &asset_sent.to_string())? else {
         return Err(ContractError::NoOngoingSale {  })
     };
 

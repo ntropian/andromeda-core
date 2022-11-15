@@ -186,7 +186,7 @@ pub fn test_start_sale() {
     execute(deps.as_mut(), env.clone(), token_info, msg).unwrap();
 
     let sale = SALE
-        .load(deps.as_ref().storage, exchange_asset.to_string())
+        .load(deps.as_ref().storage, &exchange_asset.to_string())
         .unwrap();
 
     assert_eq!(sale.exchange_rate, exchange_rate);
@@ -291,7 +291,7 @@ pub fn test_purchase_not_enough_sent() {
     let exchange_rate = Uint128::from(10u128);
     SALE.save(
         deps.as_mut().storage,
-        exchange_asset.to_string(),
+        &exchange_asset.to_string(),
         &Sale {
             amount: Uint128::from(100u128),
             exchange_rate,
@@ -349,7 +349,7 @@ pub fn test_purchase_no_tokens_left() {
     let exchange_rate = Uint128::from(10u128);
     SALE.save(
         deps.as_mut().storage,
-        exchange_asset.to_string(),
+        &exchange_asset.to_string(),
         &Sale {
             amount: Uint128::zero(),
             exchange_rate,
@@ -402,7 +402,7 @@ pub fn test_purchase_not_enough_tokens() {
     let exchange_rate = Uint128::from(10u128);
     SALE.save(
         deps.as_mut().storage,
-        exchange_asset.to_string(),
+        &exchange_asset.to_string(),
         &Sale {
             amount: Uint128::one(),
             exchange_rate,

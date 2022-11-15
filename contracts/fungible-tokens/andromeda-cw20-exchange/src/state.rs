@@ -5,4 +5,4 @@ use cw_asset::AssetInfo;
 use cw_storage_plus::{Item, Map};
 
 pub const TOKEN_ADDRESS: Item<AndrAddress> = Item::new("token_address");
-pub const SALE: Map<String, Sale> = Map::new("sale");
+pub const SALE: Map<&str, Sale> = Map::new("sale");
