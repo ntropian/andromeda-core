@@ -138,6 +138,10 @@ pub fn execute_start_sale(
     )?;
 
     ensure!(
+        !exchange_rate.is_zero(),
+        ContractError::InvalidZeroAmount {}
+    );
+    ensure!(
         ADOContract::default().is_contract_owner(execute_env.deps.storage, &sender)?,
         ContractError::Unauthorized {}
     );

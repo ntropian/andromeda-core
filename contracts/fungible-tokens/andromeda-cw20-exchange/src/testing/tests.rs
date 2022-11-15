@@ -234,6 +234,44 @@ pub fn test_start_sale_ongoing() {
 }
 
 #[test]
+pub fn test_start_sale_zero_exchange_rate() {
+    let env = mock_env();
+    let mut deps = mock_dependencies();
+    let owner = Addr::unchecked("owner");
+    let exchange_asset = AssetInfo::Cw20(Addr::unchecked("exchanged_asset"));
+    let token_address = Addr::unchecked("cw20");
+    let info = mock_info(owner.as_str(), &[]);
+    let token_info = mock_info(token_address.as_str(), &[]);
+
+    instantiate(
+        deps.as_mut(),
+        env.clone(),
+        info.clone(),
+        InstantiateMsg {
+            token_address: AndrAddress::from_string(token_address.to_string()),
+        },
+    )
+    .unwrap();
+
+    let exchange_rate = Uint128::zero();
+    let sale_amount = Uint128::from(100u128);
+    let hook = Cw20HookMsg::StartSale {
+        asset: exchange_asset.clone(),
+        exchange_rate: exchange_rate.clone(),
+    };
+    let receive_msg = Cw20ReceiveMsg {
+        sender: owner.to_string(),
+        msg: to_binary(&hook).unwrap(),
+        amount: sale_amount.clone(),
+    };
+    let msg = ExecuteMsg::Receive(receive_msg);
+
+    let err = execute(deps.as_mut(), env.clone(), token_info, msg).unwrap_err();
+
+    assert_eq!(err, ContractError::InvalidZeroAmount {})
+}
+
+#[test]
 pub fn test_purchase_no_sale() {
     let env = mock_env();
     let mut deps = mock_dependencies();
@@ -300,7 +338,7 @@ pub fn test_purchase_not_enough_sent() {
     .unwrap();
 
     // Purchase Tokens
-    let exchange_info = mock_info(&exchange_asset.to_string(), &[]);
+    let exchange_info = mock_info("exchanged_asset", &[]);
     let purchase_amount = Uint128::from(1u128);
     let hook = Cw20HookMsg::Purchase { recipient: None };
     let receive_msg = Cw20ReceiveMsg {
@@ -358,7 +396,7 @@ pub fn test_purchase_no_tokens_left() {
     .unwrap();
 
     // Purchase Tokens
-    let exchange_info = mock_info(&exchange_asset.to_string(), &[]);
+    let exchange_info = mock_info("exchanged_asset", &[]);
     let purchase_amount = Uint128::from(100u128);
     let hook = Cw20HookMsg::Purchase { recipient: None };
     let receive_msg = Cw20ReceiveMsg {
@@ -411,7 +449,7 @@ pub fn test_purchase_not_enough_tokens() {
     .unwrap();
 
     // Purchase Tokens
-    let exchange_info = mock_info(&exchange_asset.to_string(), &[]);
+    let exchange_info = mock_info("exchanged_asset", &[]);
     let purchase_amount = Uint128::from(100u128);
     let hook = Cw20HookMsg::Purchase { recipient: None };
     let receive_msg = Cw20ReceiveMsg {
