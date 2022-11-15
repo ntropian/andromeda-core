@@ -502,7 +502,7 @@ pub fn test_purchase_not_enough_sent_native() {
     let exchange_rate = Uint128::from(10u128);
     SALE.save(
         deps.as_mut().storage,
-        &"native:test".to_string(),
+        "native:test",
         &Sale {
             amount: Uint128::from(100u128),
             exchange_rate,
@@ -546,7 +546,7 @@ pub fn test_purchase_no_tokens_left_native() {
     let exchange_rate = Uint128::from(10u128);
     SALE.save(
         deps.as_mut().storage,
-        &"native:test".to_string(),
+        "native:test",
         &Sale {
             amount: Uint128::zero(),
             exchange_rate,
@@ -585,7 +585,7 @@ pub fn test_purchase_not_enough_tokens_native() {
     let exchange_rate = Uint128::from(10u128);
     SALE.save(
         deps.as_mut().storage,
-        &"native:test".to_string(),
+        "native:test",
         &Sale {
             amount: Uint128::from(1u128),
             exchange_rate,
