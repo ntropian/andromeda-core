@@ -3,13 +3,13 @@ use andromeda_fungible_tokens::cw20_exchange::{
     Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, Sale,
 };
 use common::{
-    ado_base::{AndromedaQuery, InstantiateMsg as BaseInstantiateMsg},
+    ado_base::InstantiateMsg as BaseInstantiateMsg,
     // encode_binary,
     error::ContractError,
     // parse_message,
 };
 use cosmwasm_std::{
-    attr, coin, ensure, entry_point, from_binary, to_binary, wasm_execute, Addr, BankMsg, Binary,
+    attr, coin, ensure, entry_point, from_binary, to_binary, wasm_execute, BankMsg, Binary,
     CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, SubMsg, Uint128,
 };
 use cw2::{get_contract_version, set_contract_version};
@@ -185,8 +185,8 @@ pub fn execute_purchase(
         return Err(ContractError::NoOngoingSale {  })
     };
 
-    let purchased = amount_sent.clone().checked_div(sale.exchange_rate).unwrap();
-    let remainder = amount_sent.clone().checked_sub(purchased)?;
+    let purchased = amount_sent.checked_div(sale.exchange_rate).unwrap();
+    let remainder = amount_sent.checked_sub(purchased)?;
 
     ensure!(
         !purchased.is_zero(),
@@ -277,7 +277,7 @@ pub fn execute_purchase_native(
 
 pub fn execute_cancel_sale(
     execute_env: ExecuteEnv,
-    asset: AssetInfo,
+    _asset: AssetInfo,
 ) -> Result<Response, ContractError> {
     let contract = ADOContract::default();
     ensure!(
@@ -329,7 +329,7 @@ fn from_semver(err: semver::Error) -> StdError {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> Result<Binary, ContractError> {
     // match msg {
     //     QueryMsg::AndrQuery(msg) => handle_andromeda_query(deps, env, msg),
     // }

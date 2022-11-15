@@ -8,7 +8,7 @@ use cw20::Cw20ReceiveMsg;
 use cw_asset::AssetInfo;
 
 use crate::{
-    contract::{execute, instantiate, query},
+    contract::{execute, instantiate},
     state::{SALE, TOKEN_ADDRESS},
 };
 
@@ -22,8 +22,8 @@ pub fn test_instantiate() {
 
     instantiate(
         deps.as_mut(),
-        env.clone(),
-        info.clone(),
+        env,
+        info,
         InstantiateMsg {
             token_address: AndrAddress::from_string(token_address.to_string()),
         },
@@ -55,7 +55,7 @@ pub fn test_start_sale_invalid_token() {
     .unwrap();
 
     let hook = Cw20HookMsg::StartSale {
-        asset: exchange_asset.clone(),
+        asset: exchange_asset,
         exchange_rate: Uint128::from(10u128),
     };
     // Owner set as Cw20ReceiveMsg sender to ensure that this message will error even if a malicious user
@@ -67,7 +67,7 @@ pub fn test_start_sale_invalid_token() {
     };
     let msg = ExecuteMsg::Receive(receive_msg);
 
-    let err = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap_err();
+    let err = execute(deps.as_mut(), env, info, msg).unwrap_err();
 
     assert_eq!(
         err,
@@ -97,7 +97,7 @@ pub fn test_start_sale_unauthorised() {
     .unwrap();
 
     let hook = Cw20HookMsg::StartSale {
-        asset: exchange_asset.clone(),
+        asset: exchange_asset,
         exchange_rate: Uint128::from(10u128),
     };
     let receive_msg = Cw20ReceiveMsg {
@@ -106,7 +106,7 @@ pub fn test_start_sale_unauthorised() {
         amount: Uint128::from(100u128),
     };
     let msg = ExecuteMsg::Receive(receive_msg);
-    let err = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap_err();
+    let err = execute(deps.as_mut(), env, info, msg).unwrap_err();
 
     assert_eq!(err, ContractError::Unauthorized {})
 }
@@ -131,7 +131,7 @@ pub fn test_start_sale_zero_amount() {
     .unwrap();
 
     let hook = Cw20HookMsg::StartSale {
-        asset: exchange_asset.clone(),
+        asset: exchange_asset,
         exchange_rate: Uint128::from(10u128),
     };
     let receive_msg = Cw20ReceiveMsg {
@@ -140,7 +140,7 @@ pub fn test_start_sale_zero_amount() {
         amount: Uint128::zero(),
     };
     let msg = ExecuteMsg::Receive(receive_msg);
-    let err = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap_err();
+    let err = execute(deps.as_mut(), env, info, msg).unwrap_err();
 
     assert_eq!(
         err,
@@ -163,7 +163,7 @@ pub fn test_start_sale() {
     instantiate(
         deps.as_mut(),
         env.clone(),
-        info.clone(),
+        info,
         InstantiateMsg {
             token_address: AndrAddress::from_string(token_address.to_string()),
         },
@@ -174,16 +174,16 @@ pub fn test_start_sale() {
     let sale_amount = Uint128::from(100u128);
     let hook = Cw20HookMsg::StartSale {
         asset: exchange_asset.clone(),
-        exchange_rate: exchange_rate.clone(),
+        exchange_rate: exchange_rate,
     };
     let receive_msg = Cw20ReceiveMsg {
         sender: owner.to_string(),
         msg: to_binary(&hook).unwrap(),
-        amount: sale_amount.clone(),
+        amount: sale_amount,
     };
     let msg = ExecuteMsg::Receive(receive_msg);
 
-    execute(deps.as_mut(), env.clone(), token_info, msg).unwrap();
+    execute(deps.as_mut(), env, token_info, msg).unwrap();
 
     let sale = SALE
         .load(deps.as_ref().storage, &exchange_asset.to_string())
@@ -206,7 +206,7 @@ pub fn test_start_sale_ongoing() {
     instantiate(
         deps.as_mut(),
         env.clone(),
-        info.clone(),
+        info,
         InstantiateMsg {
             token_address: AndrAddress::from_string(token_address.to_string()),
         },
@@ -216,19 +216,19 @@ pub fn test_start_sale_ongoing() {
     let exchange_rate = Uint128::from(10u128);
     let sale_amount = Uint128::from(100u128);
     let hook = Cw20HookMsg::StartSale {
-        asset: exchange_asset.clone(),
-        exchange_rate: exchange_rate.clone(),
+        asset: exchange_asset,
+        exchange_rate: exchange_rate,
     };
     let receive_msg = Cw20ReceiveMsg {
         sender: owner.to_string(),
         msg: to_binary(&hook).unwrap(),
-        amount: sale_amount.clone(),
+        amount: sale_amount,
     };
     let msg = ExecuteMsg::Receive(receive_msg);
 
     execute(deps.as_mut(), env.clone(), token_info.clone(), msg.clone()).unwrap();
 
-    let err = execute(deps.as_mut(), env.clone(), token_info, msg).unwrap_err();
+    let err = execute(deps.as_mut(), env, token_info, msg).unwrap_err();
 
     assert_eq!(err, ContractError::SaleNotEnded {})
 }
@@ -246,7 +246,7 @@ pub fn test_start_sale_zero_exchange_rate() {
     instantiate(
         deps.as_mut(),
         env.clone(),
-        info.clone(),
+        info,
         InstantiateMsg {
             token_address: AndrAddress::from_string(token_address.to_string()),
         },
@@ -256,17 +256,17 @@ pub fn test_start_sale_zero_exchange_rate() {
     let exchange_rate = Uint128::zero();
     let sale_amount = Uint128::from(100u128);
     let hook = Cw20HookMsg::StartSale {
-        asset: exchange_asset.clone(),
-        exchange_rate: exchange_rate.clone(),
+        asset: exchange_asset,
+        exchange_rate: exchange_rate,
     };
     let receive_msg = Cw20ReceiveMsg {
         sender: owner.to_string(),
         msg: to_binary(&hook).unwrap(),
-        amount: sale_amount.clone(),
+        amount: sale_amount,
     };
     let msg = ExecuteMsg::Receive(receive_msg);
 
-    let err = execute(deps.as_mut(), env.clone(), token_info, msg).unwrap_err();
+    let err = execute(deps.as_mut(), env, token_info, msg).unwrap_err();
 
     assert_eq!(err, ContractError::InvalidZeroAmount {})
 }
@@ -284,7 +284,7 @@ pub fn test_purchase_no_sale() {
     instantiate(
         deps.as_mut(),
         env.clone(),
-        info.clone(),
+        info,
         InstantiateMsg {
             token_address: AndrAddress::from_string(token_address.to_string()),
         },
@@ -297,11 +297,11 @@ pub fn test_purchase_no_sale() {
     let receive_msg = Cw20ReceiveMsg {
         sender: purchaser.to_string(),
         msg: to_binary(&hook).unwrap(),
-        amount: purchase_amount.clone(),
+        amount: purchase_amount,
     };
     let msg = ExecuteMsg::Receive(receive_msg);
 
-    let err = execute(deps.as_mut(), env.clone(), token_info.clone(), msg.clone()).unwrap_err();
+    let err = execute(deps.as_mut(), env, token_info, msg).unwrap_err();
 
     assert_eq!(err, ContractError::NoOngoingSale {});
 }
@@ -319,7 +319,7 @@ pub fn test_purchase_not_enough_sent() {
     instantiate(
         deps.as_mut(),
         env.clone(),
-        info.clone(),
+        info,
         InstantiateMsg {
             token_address: AndrAddress::from_string(token_address.to_string()),
         },
@@ -344,17 +344,11 @@ pub fn test_purchase_not_enough_sent() {
     let receive_msg = Cw20ReceiveMsg {
         sender: purchaser.to_string(),
         msg: to_binary(&hook).unwrap(),
-        amount: purchase_amount.clone(),
+        amount: purchase_amount,
     };
     let msg = ExecuteMsg::Receive(receive_msg);
 
-    let err = execute(
-        deps.as_mut(),
-        env.clone(),
-        exchange_info.clone(),
-        msg.clone(),
-    )
-    .unwrap_err();
+    let err = execute(deps.as_mut(), env, exchange_info, msg).unwrap_err();
 
     assert_eq!(
         err,
@@ -377,7 +371,7 @@ pub fn test_purchase_no_tokens_left() {
     instantiate(
         deps.as_mut(),
         env.clone(),
-        info.clone(),
+        info,
         InstantiateMsg {
             token_address: AndrAddress::from_string(token_address.to_string()),
         },
@@ -402,17 +396,11 @@ pub fn test_purchase_no_tokens_left() {
     let receive_msg = Cw20ReceiveMsg {
         sender: purchaser.to_string(),
         msg: to_binary(&hook).unwrap(),
-        amount: purchase_amount.clone(),
+        amount: purchase_amount,
     };
     let msg = ExecuteMsg::Receive(receive_msg);
 
-    let err = execute(
-        deps.as_mut(),
-        env.clone(),
-        exchange_info.clone(),
-        msg.clone(),
-    )
-    .unwrap_err();
+    let err = execute(deps.as_mut(), env, exchange_info, msg).unwrap_err();
 
     assert_eq!(err, ContractError::NotEnoughTokens {});
 }
@@ -430,7 +418,7 @@ pub fn test_purchase_not_enough_tokens() {
     instantiate(
         deps.as_mut(),
         env.clone(),
-        info.clone(),
+        info,
         InstantiateMsg {
             token_address: AndrAddress::from_string(token_address.to_string()),
         },
@@ -455,17 +443,11 @@ pub fn test_purchase_not_enough_tokens() {
     let receive_msg = Cw20ReceiveMsg {
         sender: purchaser.to_string(),
         msg: to_binary(&hook).unwrap(),
-        amount: purchase_amount.clone(),
+        amount: purchase_amount,
     };
     let msg = ExecuteMsg::Receive(receive_msg);
 
-    let err = execute(
-        deps.as_mut(),
-        env.clone(),
-        exchange_info.clone(),
-        msg.clone(),
-    )
-    .unwrap_err();
+    let err = execute(deps.as_mut(), env, exchange_info, msg).unwrap_err();
 
     assert_eq!(err, ContractError::NotEnoughTokens {});
 }
