@@ -174,7 +174,7 @@ pub fn test_start_sale() {
     let sale_amount = Uint128::from(100u128);
     let hook = Cw20HookMsg::StartSale {
         asset: exchange_asset.clone(),
-        exchange_rate: exchange_rate,
+        exchange_rate,
     };
     let receive_msg = Cw20ReceiveMsg {
         sender: owner.to_string(),
@@ -217,7 +217,7 @@ pub fn test_start_sale_ongoing() {
     let sale_amount = Uint128::from(100u128);
     let hook = Cw20HookMsg::StartSale {
         asset: exchange_asset,
-        exchange_rate: exchange_rate,
+        exchange_rate,
     };
     let receive_msg = Cw20ReceiveMsg {
         sender: owner.to_string(),
@@ -257,7 +257,7 @@ pub fn test_start_sale_zero_exchange_rate() {
     let sale_amount = Uint128::from(100u128);
     let hook = Cw20HookMsg::StartSale {
         asset: exchange_asset,
-        exchange_rate: exchange_rate,
+        exchange_rate,
     };
     let receive_msg = Cw20ReceiveMsg {
         sender: owner.to_string(),

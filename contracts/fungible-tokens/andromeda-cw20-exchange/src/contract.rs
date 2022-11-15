@@ -117,7 +117,7 @@ pub fn execute_receive(
             execute_env,
             amount_sent,
             asset_sent,
-            recipient.unwrap_or(sender.to_string()).as_str(),
+            recipient.unwrap_or_else(|| sender.to_string()).as_str(),
             &sender,
         ),
     }
@@ -261,7 +261,7 @@ pub fn execute_purchase_native(
     recipient: Option<String>,
 ) -> Result<Response, ContractError> {
     // Default to sender as recipient
-    let recipient = recipient.unwrap_or(execute_env.info.sender.to_string());
+    let recipient = recipient.unwrap_or_else(|| execute_env.info.sender.to_string());
     execute_env.deps.api.addr_validate(&recipient)?;
     let sender = execute_env.info.sender.to_string();
 
