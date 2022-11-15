@@ -7,7 +7,8 @@ use serde::{Deserialize, Serialize};
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    token_address: AndrAddress,
+    /// Address of the CW20 token to be sold
+    pub token_address: AndrAddress,
 }
 
 #[cw_serde]
@@ -19,7 +20,13 @@ pub enum ExecuteMsg {
 }
 
 #[derive(Deserialize, Serialize)]
-pub enum CW20HookMsg {
+pub struct Sale {
+    pub exchange_rate: Uint128,
+    pub amount: Uint128,
+}
+
+#[derive(Deserialize, Serialize)]
+pub enum Cw20HookMsg {
     StartSale {
         asset: AssetInfo,
         exchange_rate: Uint128,

@@ -1,12 +1,8 @@
-use cosmwasm_std::{StdResult, Storage};
-use cw_storage_plus::Map;
+use andromeda_fungible_tokens::cw20_exchange::Sale;
+use common::app::AndrAddress;
+use cosmwasm_std::Uint128;
+use cw_asset::AssetInfo;
+use cw_storage_plus::{Item, Map};
 
-pub const CODE_ID: Map<&str, u64> = Map::new("code_id");
-
-pub fn store_code_id(storage: &mut dyn Storage, code_id_key: &str, code_id: u64) -> StdResult<()> {
-    CODE_ID.save(storage, code_id_key, &code_id)
-}
-
-pub fn read_code_id(storage: &dyn Storage, code_id_key: &str) -> StdResult<u64> {
-    CODE_ID.load(storage, code_id_key)
-}
+pub const TOKEN_ADDRESS: Item<AndrAddress> = Item::new("token_address");
+pub const SALE: Map<String, Sale> = Map::new("sale");

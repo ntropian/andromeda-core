@@ -1,6 +1,6 @@
 use ado_base::state::ADOContract;
 use andromeda_fungible_tokens::cw20_exchange::{
-    CW20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
+    Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, Sale,
 };
 use common::{
     ado_base::{AndromedaQuery, InstantiateMsg as BaseInstantiateMsg},
@@ -9,14 +9,16 @@ use common::{
     // parse_message,
 };
 use cosmwasm_std::{
-    attr, ensure, entry_point, from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo,
-    Reply, Response, StdError, Uint128,
+    attr, ensure, entry_point, from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env,
+    MessageInfo, Reply, Response, StdError, Uint128,
 };
 use cw2::{get_contract_version, set_contract_version};
 use cw20::Cw20ReceiveMsg;
 use cw_asset::AssetInfo;
 use cw_utils::one_coin;
 use semver::Version;
+
+use crate::state::{SALE, TOKEN_ADDRESS};
 
 pub struct ExecuteEnv<'a> {
     deps: DepsMut<'a>,
@@ -33,9 +35,11 @@ pub fn instantiate(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    _msg: InstantiateMsg,
+    msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    TOKEN_ADDRESS.save(deps.storage, &msg.token_address)?;
+
     ADOContract::default().instantiate(
         deps.storage,
         env,
@@ -92,11 +96,17 @@ pub fn execute_receive(
     let amount_sent = receive_msg.amount;
 
     match from_binary(&receive_msg.msg)? {
-        CW20HookMsg::StartSale {
+        Cw20HookMsg::StartSale {
             asset,
             exchange_rate,
-        } => execute_start_sale(execute_env, amount_sent, asset, exchange_rate),
-        CW20HookMsg::Purchase { recipient } => execute_purchase(
+        } => execute_start_sale(
+            execute_env,
+            amount_sent,
+            asset,
+            exchange_rate,
+            receive_msg.sender,
+        ),
+        Cw20HookMsg::Purchase { recipient } => execute_purchase(
             execute_env,
             amount_sent,
             sent_asset,
@@ -110,10 +120,42 @@ pub fn execute_start_sale(
     amount: Uint128,
     asset: AssetInfo,
     exchange_rate: Uint128,
+    sender: String,
 ) -> Result<Response, ContractError> {
-    let resp = Response::default();
+    let app_contract = ADOContract::default().get_app_contract(execute_env.deps.storage)?;
+    let token_addr = TOKEN_ADDRESS.load(execute_env.deps.storage)?.get_address(
+        execute_env.deps.api,
+        &execute_env.deps.querier,
+        app_contract,
+    )?;
 
-    Ok(resp)
+    ensure!(
+        ADOContract::default().is_contract_owner(execute_env.deps.storage, &sender)?,
+        ContractError::Unauthorized {}
+    );
+    ensure!(
+        execute_env.info.sender == token_addr,
+        ContractError::InvalidFunds {
+            msg: "Incorrect CW20 provided for sale".to_string()
+        }
+    );
+
+    // Do not allow duplicate sales
+    let current_sale = SALE.may_load(execute_env.deps.storage, asset.to_string())?;
+    ensure!(current_sale.is_none(), ContractError::SaleNotEnded {});
+
+    let sale = Sale {
+        amount,
+        exchange_rate,
+    };
+    SALE.save(execute_env.deps.storage, asset.to_string(), &sale)?;
+
+    Ok(Response::default().add_attributes(vec![
+        attr("action", "start_sale"),
+        attr("asset", asset.to_string()),
+        attr("rate", exchange_rate),
+        attr("amount", amount),
+    ]))
 }
 
 pub fn execute_purchase(
