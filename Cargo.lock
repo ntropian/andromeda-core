@@ -200,6 +200,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "andromeda-cw20-exchange"
+version = "0.1.0"
+dependencies = [
+ "ado-base",
+ "andromeda-fungible-tokens",
+ "andromeda-testing",
+ "common",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-asset",
+ "cw-multi-test",
+ "cw-storage-plus 0.15.0",
+ "cw-utils 0.15.0",
+ "cw2 0.15.0",
+ "cw20 0.15.0",
+ "schemars",
+ "semver",
+ "serde",
+]
+
+[[package]]
 name = "andromeda-cw20-staking"
 version = "0.1.0"
 dependencies = [
