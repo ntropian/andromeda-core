@@ -1,6 +1,7 @@
 use andromeda_fungible_tokens::cw20_exchange::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, Sale};
 use common::{app::AndrAddress, error::ContractError};
 use cosmwasm_std::{
+    coins,
     testing::{mock_dependencies, mock_env, mock_info},
     to_binary, Addr, Uint128,
 };
@@ -448,6 +449,156 @@ pub fn test_purchase_not_enough_tokens() {
     let msg = ExecuteMsg::Receive(receive_msg);
 
     let err = execute(deps.as_mut(), env, exchange_info, msg).unwrap_err();
+
+    assert_eq!(err, ContractError::NotEnoughTokens {});
+}
+
+#[test]
+pub fn test_purchase_no_sale_native() {
+    let env = mock_env();
+    let mut deps = mock_dependencies();
+    let owner = Addr::unchecked("owner");
+    let token_address = Addr::unchecked("cw20");
+    let info = mock_info(owner.as_str(), &[]);
+
+    instantiate(
+        deps.as_mut(),
+        env.clone(),
+        info,
+        InstantiateMsg {
+            token_address: AndrAddress::from_string(token_address.to_string()),
+        },
+    )
+    .unwrap();
+
+    // Purchase Tokens
+    let purchase_amount = coins(100, "test");
+    let msg = ExecuteMsg::Purchase { recipient: None };
+    let info = mock_info("purchaser", &purchase_amount);
+
+    let err = execute(deps.as_mut(), env, info, msg).unwrap_err();
+
+    assert_eq!(err, ContractError::NoOngoingSale {});
+}
+
+#[test]
+pub fn test_purchase_not_enough_sent_native() {
+    let env = mock_env();
+    let mut deps = mock_dependencies();
+    let owner = Addr::unchecked("owner");
+    let token_address = Addr::unchecked("cw20");
+    let info = mock_info(owner.as_str(), &[]);
+
+    instantiate(
+        deps.as_mut(),
+        env.clone(),
+        info,
+        InstantiateMsg {
+            token_address: AndrAddress::from_string(token_address.to_string()),
+        },
+    )
+    .unwrap();
+
+    let exchange_rate = Uint128::from(10u128);
+    SALE.save(
+        deps.as_mut().storage,
+        &"native:test".to_string(),
+        &Sale {
+            amount: Uint128::from(100u128),
+            exchange_rate,
+        },
+    )
+    .unwrap();
+
+    // Purchase Tokens
+    let purchase_amount = coins(1, "test");
+    let msg = ExecuteMsg::Purchase { recipient: None };
+    let info = mock_info("purchaser", &purchase_amount);
+
+    let err = execute(deps.as_mut(), env, info, msg).unwrap_err();
+
+    assert_eq!(
+        err,
+        ContractError::InvalidFunds {
+            msg: "Not enough funds sent to purchase a token".to_string()
+        }
+    );
+}
+
+#[test]
+pub fn test_purchase_no_tokens_left_native() {
+    let env = mock_env();
+    let mut deps = mock_dependencies();
+    let owner = Addr::unchecked("owner");
+    let token_address = Addr::unchecked("cw20");
+    let info = mock_info(owner.as_str(), &[]);
+
+    instantiate(
+        deps.as_mut(),
+        env.clone(),
+        info,
+        InstantiateMsg {
+            token_address: AndrAddress::from_string(token_address.to_string()),
+        },
+    )
+    .unwrap();
+
+    let exchange_rate = Uint128::from(10u128);
+    SALE.save(
+        deps.as_mut().storage,
+        &"native:test".to_string(),
+        &Sale {
+            amount: Uint128::zero(),
+            exchange_rate,
+        },
+    )
+    .unwrap();
+
+    // Purchase Tokens
+    let purchase_amount = coins(100, "test");
+    let msg = ExecuteMsg::Purchase { recipient: None };
+    let info = mock_info("purchaser", &purchase_amount);
+
+    let err = execute(deps.as_mut(), env, info, msg).unwrap_err();
+
+    assert_eq!(err, ContractError::NotEnoughTokens {});
+}
+
+#[test]
+pub fn test_purchase_not_enough_tokens_native() {
+    let env = mock_env();
+    let mut deps = mock_dependencies();
+    let owner = Addr::unchecked("owner");
+    let token_address = Addr::unchecked("cw20");
+    let info = mock_info(owner.as_str(), &[]);
+
+    instantiate(
+        deps.as_mut(),
+        env.clone(),
+        info,
+        InstantiateMsg {
+            token_address: AndrAddress::from_string(token_address.to_string()),
+        },
+    )
+    .unwrap();
+
+    let exchange_rate = Uint128::from(10u128);
+    SALE.save(
+        deps.as_mut().storage,
+        &"native:test".to_string(),
+        &Sale {
+            amount: Uint128::from(1u128),
+            exchange_rate,
+        },
+    )
+    .unwrap();
+
+    // Purchase Tokens
+    let purchase_amount = coins(100, "test");
+    let msg = ExecuteMsg::Purchase { recipient: None };
+    let info = mock_info("purchaser", &purchase_amount);
+
+    let err = execute(deps.as_mut(), env, info, msg).unwrap_err();
 
     assert_eq!(err, ContractError::NotEnoughTokens {});
 }
