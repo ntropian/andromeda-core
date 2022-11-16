@@ -479,7 +479,7 @@ pub fn test_purchase() {
         deps.as_mut().storage,
         &exchange_asset.to_string(),
         &Sale {
-            amount: sale_amount.clone(),
+            amount: sale_amount,
             exchange_rate,
         },
     )
@@ -701,7 +701,7 @@ pub fn test_purchase_native() {
         deps.as_mut().storage,
         &exchange_asset.to_string(),
         &Sale {
-            amount: sale_amount.clone(),
+            amount: sale_amount,
             exchange_rate,
         },
     )
