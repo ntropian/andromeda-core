@@ -1,11 +1,13 @@
 use ado_base::state::ADOContract;
 use andromeda_fungible_tokens::cw20_exchange::{
-    Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, Sale,
+    Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, Sale, SaleResponse,
 };
 use common::{
-    ado_base::InstantiateMsg as BaseInstantiateMsg,
+    ado_base::{AndromedaQuery, InstantiateMsg as BaseInstantiateMsg},
     // encode_binary,
     error::ContractError,
+    parse_message,
+    parse_message_safe,
     // parse_message,
 };
 use cosmwasm_std::{
@@ -359,21 +361,40 @@ fn from_semver(err: semver::Error) -> StdError {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> Result<Binary, ContractError> {
-    // match msg {
-    //     QueryMsg::AndrQuery(msg) => handle_andromeda_query(deps, env, msg),
-    // }
-    Ok(to_binary(&true)?)
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+    match msg {
+        QueryMsg::Sale { asset } => query_sale(deps, asset),
+        QueryMsg::AndrQuery(andr_msg) => handle_andromeda_query(deps, env, andr_msg),
+    }
 }
 
-// fn handle_andromeda_query(
-//     deps: Deps,
-//     env: Env,
-//     msg: AndromedaQuery,
-// ) -> Result<Binary, ContractError> {
-//     match msg {
-//         AndromedaQuery::Get(data) => {
-//         }
-//         _ => ADOContract::default().query(deps, env, msg, query),
-//     }
-// }
+fn query_sale(deps: Deps, asset: impl ToString) -> Result<Binary, ContractError> {
+    let sale = SALE.may_load(deps.storage, &asset.to_string())?;
+
+    Ok(to_binary(&SaleResponse { sale })?)
+}
+
+fn handle_andromeda_query(
+    deps: Deps,
+    env: Env,
+    msg: AndromedaQuery,
+) -> Result<Binary, ContractError> {
+    match msg {
+        AndromedaQuery::Get(data_opt) => {
+            let Some(data) = data_opt else {
+                return Err(ContractError::MissingRequiredMessageData {  });
+            };
+
+            let Some(key) = parse_message_safe::<String>(&data)? else {
+                let Some(message) = parse_message_safe::<QueryMsg>(&data)? else {
+                    return Err(ContractError::MissingRequiredMessageData {  });
+                };
+
+                return query(deps, env, message);
+            };
+
+            query_sale(deps, key)
+        }
+        _ => ADOContract::default().query(deps, env, msg, query),
+    }
+}

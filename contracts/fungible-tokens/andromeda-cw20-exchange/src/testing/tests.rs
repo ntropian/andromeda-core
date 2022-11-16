@@ -1,7 +1,9 @@
-use andromeda_fungible_tokens::cw20_exchange::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, Sale};
-use common::{app::AndrAddress, error::ContractError};
+use andromeda_fungible_tokens::cw20_exchange::{
+    Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg, Sale, SaleResponse,
+};
+use common::{ado_base::AndromedaQuery, app::AndrAddress, error::ContractError};
 use cosmwasm_std::{
-    attr, coins,
+    attr, coins, from_binary,
     testing::{mock_dependencies, mock_env, mock_info},
     to_binary, wasm_execute, Addr, BankMsg, CosmosMsg, Empty, SubMsg, Uint128,
 };
@@ -9,7 +11,7 @@ use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use cw_asset::AssetInfo;
 
 use crate::{
-    contract::{execute, instantiate},
+    contract::{execute, instantiate, query},
     state::{SALE, TOKEN_ADDRESS},
 };
 
@@ -919,4 +921,68 @@ pub fn test_cancel_sale() {
         1,
     );
     assert_eq!(message, &expected_message)
+}
+
+#[test]
+fn test_query_sale() {
+    let env = mock_env();
+    let mut deps = mock_dependencies();
+    let exchange_asset = AssetInfo::Cw20(Addr::unchecked("exchanged_asset"));
+
+    let msg = QueryMsg::Sale {
+        asset: exchange_asset.clone(),
+    };
+    let not_found_response: SaleResponse =
+        from_binary(&query(deps.as_ref(), env.clone(), msg.clone()).unwrap()).unwrap();
+
+    assert!(not_found_response.sale.is_none());
+
+    let exchange_rate = Uint128::from(10u128);
+    let sale_amount = Uint128::from(100u128);
+    let sale = Sale {
+        amount: sale_amount,
+        exchange_rate,
+    };
+    SALE.save(deps.as_mut().storage, &exchange_asset.to_string(), &sale)
+        .unwrap();
+
+    let found_response: SaleResponse =
+        from_binary(&query(deps.as_ref(), env.clone(), msg.clone()).unwrap()).unwrap();
+
+    assert_eq!(found_response.sale, Some(sale));
+}
+
+#[test]
+fn test_andr_query() {
+    let env = mock_env();
+    let mut deps = mock_dependencies();
+    let exchange_asset = AssetInfo::Cw20(Addr::unchecked("exchanged_asset"));
+
+    let exchange_rate = Uint128::from(10u128);
+    let sale_amount = Uint128::from(100u128);
+    let sale = Sale {
+        amount: sale_amount,
+        exchange_rate,
+    };
+    SALE.save(deps.as_mut().storage, &exchange_asset.to_string(), &sale)
+        .unwrap();
+
+    let msg = QueryMsg::AndrQuery(AndromedaQuery::Get(Some(
+        to_binary(&QueryMsg::Sale {
+            asset: exchange_asset.clone(),
+        })
+        .unwrap(),
+    )));
+    let query_msg_response: SaleResponse =
+        from_binary(&query(deps.as_ref(), env.clone(), msg.clone()).unwrap()).unwrap();
+
+    assert_eq!(query_msg_response.sale, Some(sale.clone()));
+
+    let key_msg = QueryMsg::AndrQuery(AndromedaQuery::Get(Some(
+        to_binary(&exchange_asset.to_string()).unwrap(),
+    )));
+    let key_response: SaleResponse =
+        from_binary(&query(deps.as_ref(), env.clone(), key_msg.clone()).unwrap()).unwrap();
+
+    assert_eq!(key_response.sale, Some(sale));
 }

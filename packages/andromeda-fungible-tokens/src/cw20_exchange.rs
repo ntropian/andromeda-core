@@ -1,4 +1,7 @@
-use common::{ado_base::AndromedaMsg, app::AndrAddress};
+use common::{
+    ado_base::{AndromedaMsg, AndromedaQuery},
+    app::AndrAddress,
+};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Uint128;
 use cw20::Cw20ReceiveMsg;
@@ -19,7 +22,7 @@ pub enum ExecuteMsg {
     AndrReceive(AndromedaMsg),
 }
 
-#[derive(Deserialize, Serialize)]
+#[cw_serde]
 pub struct Sale {
     pub exchange_rate: Uint128,
     pub amount: Uint128,
@@ -39,13 +42,15 @@ pub enum Cw20HookMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    #[returns(ExchangeRateResponse)]
-    ExchangeRate { asset: AssetInfo },
+    #[returns(SaleResponse)]
+    Sale { asset: AssetInfo },
+    #[returns(AndromedaQuery)]
+    AndrQuery(AndromedaQuery),
 }
 
 #[cw_serde]
-pub struct ExchangeRateResponse {
-    rate: Option<Uint128>,
+pub struct SaleResponse {
+    pub sale: Option<Sale>,
 }
 
 #[cw_serde]

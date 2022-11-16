@@ -48,6 +48,7 @@ pub enum ContractError {
 
     #[error("AlreadyUnbonded")]
     AlreadyUnbonded {},
+
     #[error("NFTNotFound")]
     NFTNotFound {},
 

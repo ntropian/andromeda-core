@@ -14,11 +14,11 @@ use crate::error::ContractError;
 use ado_base::{AndromedaQuery, QueryMsg};
 use cosmwasm_std::{
     ensure, from_binary, to_binary, BankMsg, Binary, Coin, CosmosMsg, QuerierWrapper, QueryRequest,
-    SubMsg, WasmQuery,
+    StdError, StdResult, SubMsg, WasmQuery,
 };
 use cw20::Cw20Coin;
 
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 use cosmwasm_schema::cw_serde;
@@ -44,6 +44,21 @@ where
 pub fn parse_message<T: DeserializeOwned>(data: &Option<Binary>) -> Result<T, ContractError> {
     let data = unwrap_or_err(data, ContractError::MissingRequiredMessageData {})?;
     parse_struct::<T>(data)
+}
+
+/// Parses Binary in to a given type
+/// Returns None if the Binary can not be decoded to the given type
+/// Returns Some(data) if the decoding was successful
+pub fn parse_message_safe<T>(data: &Binary) -> StdResult<Option<T>>
+where
+    T: DeserializeOwned,
+{
+    let data_res: Result<T, StdError> = from_binary(data);
+
+    match data_res {
+        Err(_e) => Ok(None),
+        Ok(parsed_data) => Ok(Some(parsed_data)),
+    }
 }
 
 pub fn encode_binary<T>(val: &T) -> Result<Binary, ContractError>
