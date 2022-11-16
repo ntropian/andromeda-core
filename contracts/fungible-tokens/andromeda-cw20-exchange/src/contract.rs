@@ -186,7 +186,7 @@ pub fn execute_purchase(
     };
 
     let purchased = amount_sent.checked_div(sale.exchange_rate).unwrap();
-    let remainder = amount_sent.checked_sub(purchased)?;
+    let remainder = amount_sent.checked_sub(purchased.checked_mul(sale.exchange_rate)?)?;
 
     ensure!(
         !purchased.is_zero(),

@@ -1,9 +1,9 @@
 use andromeda_fungible_tokens::cw20_exchange::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, Sale};
 use common::{app::AndrAddress, error::ContractError};
 use cosmwasm_std::{
-    coins,
+    attr, coins,
     testing::{mock_dependencies, mock_env, mock_info},
-    to_binary, Addr, Uint128,
+    to_binary, Addr, BankMsg, CosmosMsg, SubMsg, Uint128,
 };
 use cw20::Cw20ReceiveMsg;
 use cw_asset::AssetInfo;
@@ -601,4 +601,52 @@ pub fn test_purchase_not_enough_tokens_native() {
     let err = execute(deps.as_mut(), env, info, msg).unwrap_err();
 
     assert_eq!(err, ContractError::NotEnoughTokens {});
+}
+
+#[test]
+pub fn test_purchase_refund() {
+    let env = mock_env();
+    let mut deps = mock_dependencies();
+    let owner = Addr::unchecked("owner");
+    let token_address = Addr::unchecked("cw20");
+    let info = mock_info(owner.as_str(), &[]);
+
+    instantiate(
+        deps.as_mut(),
+        env.clone(),
+        info,
+        InstantiateMsg {
+            token_address: AndrAddress::from_string(token_address.to_string()),
+        },
+    )
+    .unwrap();
+
+    let exchange_rate = Uint128::from(10u128);
+    SALE.save(
+        deps.as_mut().storage,
+        "native:test",
+        &Sale {
+            amount: Uint128::from(100u128),
+            exchange_rate,
+        },
+    )
+    .unwrap();
+
+    // Purchase Tokens
+    let purchase_amount = coins(105, "test");
+    let msg = ExecuteMsg::Purchase { recipient: None };
+    let info = mock_info("purchaser", &purchase_amount);
+
+    let res = execute(deps.as_mut(), env, info.clone(), msg).unwrap();
+    let refund_attribute = res.attributes.first().unwrap();
+    let refund_message = res.messages.first().unwrap();
+
+    assert_eq!(refund_attribute, attr("refunded_amount", "5"));
+    assert_eq!(
+        refund_message,
+        &SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
+            to_address: info.sender.to_string(),
+            amount: coins(5u128, "test")
+        }))
+    )
 }
