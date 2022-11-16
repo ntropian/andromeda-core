@@ -192,11 +192,9 @@ fn generate_refund_message(
                 REFUND_REPLY_ID,
             ))
         }
-        _ => {
-            return Err(ContractError::InvalidAsset {
-                asset: asset.to_string(),
-            })
-        }
+        _ => Err(ContractError::InvalidAsset {
+            asset: asset.to_string(),
+        }),
     }
 }
 
@@ -211,7 +209,7 @@ pub fn execute_purchase(
     execute_env.deps.api.addr_validate(recipient)?;
     let mut resp = Response::default();
 
-    let Some(sale) = SALE.may_load(execute_env.deps.storage, &asset_sent.to_string())? else {
+    let Some(mut sale) = SALE.may_load(execute_env.deps.storage, &asset_sent.to_string())? else {
         return Err(ContractError::NoOngoingSale {  })
     };
 
@@ -252,6 +250,10 @@ pub fn execute_purchase(
         CosmosMsg::Wasm(wasm_msg),
         PURCHASE_REPLY_ID,
     ));
+
+    // Update sale amount remaining
+    sale.amount = sale.amount.checked_sub(purchased)?;
+    SALE.save(execute_env.deps.storage, &asset_sent.to_string(), &sale)?;
 
     Ok(resp.add_attributes(vec![
         attr("action", "purchase"),
