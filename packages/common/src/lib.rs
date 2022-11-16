@@ -18,7 +18,7 @@ use cosmwasm_std::{
 };
 use cw20::Cw20Coin;
 
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Serialize};
 use std::collections::BTreeMap;
 
 use cosmwasm_schema::cw_serde;

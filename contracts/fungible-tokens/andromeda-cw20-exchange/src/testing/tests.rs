@@ -947,7 +947,7 @@ fn test_query_sale() {
         .unwrap();
 
     let found_response: SaleResponse =
-        from_binary(&query(deps.as_ref(), env.clone(), msg.clone()).unwrap()).unwrap();
+        from_binary(&query(deps.as_ref(), env, msg).unwrap()).unwrap();
 
     assert_eq!(found_response.sale, Some(sale));
 }
@@ -974,7 +974,7 @@ fn test_andr_query() {
         .unwrap(),
     )));
     let query_msg_response: SaleResponse =
-        from_binary(&query(deps.as_ref(), env.clone(), msg.clone()).unwrap()).unwrap();
+        from_binary(&query(deps.as_ref(), env.clone(), msg).unwrap()).unwrap();
 
     assert_eq!(query_msg_response.sale, Some(sale.clone()));
 
@@ -982,7 +982,7 @@ fn test_andr_query() {
         to_binary(&exchange_asset.to_string()).unwrap(),
     )));
     let key_response: SaleResponse =
-        from_binary(&query(deps.as_ref(), env.clone(), key_msg.clone()).unwrap()).unwrap();
+        from_binary(&query(deps.as_ref(), env, key_msg).unwrap()).unwrap();
 
     assert_eq!(key_response.sale, Some(sale));
 }

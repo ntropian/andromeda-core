@@ -6,7 +6,6 @@ use common::{
     ado_base::{AndromedaQuery, InstantiateMsg as BaseInstantiateMsg},
     // encode_binary,
     error::ContractError,
-    parse_message,
     parse_message_safe,
     // parse_message,
 };
