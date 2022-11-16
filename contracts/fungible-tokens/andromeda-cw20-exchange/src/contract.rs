@@ -170,6 +170,36 @@ pub fn execute_start_sale(
     ]))
 }
 
+fn generate_refund_message(
+    asset: AssetInfo,
+    amount: Uint128,
+    recipient: String,
+) -> Result<SubMsg, ContractError> {
+    match asset.clone() {
+        AssetInfo::Native(denom) => {
+            let bank_msg = BankMsg::Send {
+                to_address: recipient,
+                amount: vec![coin(amount.u128(), denom)],
+            };
+
+            Ok(SubMsg::new(CosmosMsg::Bank(bank_msg)))
+        }
+        AssetInfo::Cw20(addr) => {
+            let transfer_msg = Cw20ExecuteMsg::Transfer { recipient, amount };
+            let wasm_msg = wasm_execute(addr, &transfer_msg, vec![])?;
+            Ok(SubMsg::reply_on_error(
+                CosmosMsg::Wasm(wasm_msg),
+                REFUND_REPLY_ID,
+            ))
+        }
+        _ => {
+            return Err(ContractError::InvalidAsset {
+                asset: asset.to_string(),
+            })
+        }
+    }
+}
+
 pub fn execute_purchase(
     execute_env: ExecuteEnv,
     amount_sent: Uint128,
@@ -198,36 +228,13 @@ pub fn execute_purchase(
 
     // If purchase was rounded down return funds to purchaser
     if !remainder.is_zero() {
-        match asset_sent.clone() {
-            AssetInfo::Native(denom) => {
-                let bank_msg = BankMsg::Send {
-                    to_address: sender.to_string(),
-                    amount: vec![coin(remainder.u128(), denom)],
-                };
-
-                resp = resp
-                    .add_message(CosmosMsg::Bank(bank_msg))
-                    .add_attributes(vec![attr("refunded_amount", remainder)]);
-            }
-            AssetInfo::Cw20(addr) => {
-                let transfer_msg = Cw20ExecuteMsg::Transfer {
-                    recipient: sender.to_string(),
-                    amount: remainder,
-                };
-                let wasm_msg = wasm_execute(addr, &transfer_msg, vec![])?;
-                resp = resp
-                    .add_submessage(SubMsg::reply_on_error(
-                        CosmosMsg::Wasm(wasm_msg),
-                        REFUND_REPLY_ID,
-                    ))
-                    .add_attributes(vec![attr("refunded_amount", remainder)]);
-            }
-            _ => {
-                return Err(ContractError::InvalidAsset {
-                    asset: asset_sent.to_string(),
-                })
-            }
-        }
+        resp = resp
+            .add_submessage(generate_refund_message(
+                asset_sent.clone(),
+                remainder,
+                sender.to_string(),
+            )?)
+            .add_attribute("refunded_amount", remainder);
     }
 
     // Transfer tokens to purchaser recipient
@@ -277,7 +284,7 @@ pub fn execute_purchase_native(
 
 pub fn execute_cancel_sale(
     execute_env: ExecuteEnv,
-    _asset: AssetInfo,
+    asset: AssetInfo,
 ) -> Result<Response, ContractError> {
     let contract = ADOContract::default();
     ensure!(
@@ -285,9 +292,30 @@ pub fn execute_cancel_sale(
         ContractError::Unauthorized {}
     );
 
-    let resp = Response::default();
+    let Some(sale) = SALE.may_load(execute_env.deps.storage, &asset.to_string())? else {
+        return Err(ContractError::NoOngoingSale {  })
+    };
 
-    Ok(resp)
+    let mut resp = Response::default();
+
+    // Refund any remaining amount
+    if !sale.amount.is_zero() {
+        resp = resp
+            .add_submessage(generate_refund_message(
+                asset.clone(),
+                sale.amount,
+                execute_env.info.sender.to_string(),
+            )?)
+            .add_attribute("refunded_amount", sale.amount);
+    }
+
+    // Sale can now be removed
+    SALE.remove(execute_env.deps.storage, &asset.to_string());
+
+    Ok(resp.add_attributes(vec![
+        attr("action", "cancel_sale"),
+        attr("asset", asset.to_string()),
+    ]))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

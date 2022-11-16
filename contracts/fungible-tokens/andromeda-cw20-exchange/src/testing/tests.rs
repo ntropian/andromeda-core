@@ -3,9 +3,9 @@ use common::{app::AndrAddress, error::ContractError};
 use cosmwasm_std::{
     attr, coins,
     testing::{mock_dependencies, mock_env, mock_info},
-    to_binary, Addr, BankMsg, CosmosMsg, SubMsg, Uint128,
+    to_binary, wasm_execute, Addr, BankMsg, CosmosMsg, SubMsg, Uint128,
 };
-use cw20::Cw20ReceiveMsg;
+use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use cw_asset::AssetInfo;
 
 use crate::{
@@ -601,6 +601,7 @@ pub fn test_purchase_not_enough_tokens_native() {
     let err = execute(deps.as_mut(), env, info, msg).unwrap_err();
 
     assert_eq!(err, ContractError::NotEnoughTokens {});
+
 }
 
 #[test]
@@ -649,4 +650,135 @@ pub fn test_purchase_refund() {
             amount: coins(5u128, "test")
         }))
     )
+}
+
+#[test]
+pub fn execute_cancel_sale_unauthorised() {
+    let env = mock_env();
+    let mut deps = mock_dependencies();
+    let owner = Addr::unchecked("owner");
+    let token_address = Addr::unchecked("cw20");
+    let info = mock_info(owner.as_str(), &[]);
+    let exchange_asset = AssetInfo::Cw20(Addr::unchecked("exchanged_asset"));
+
+    instantiate(
+        deps.as_mut(),
+        env.clone(),
+        info,
+        InstantiateMsg {
+            token_address: AndrAddress::from_string(token_address.to_string()),
+        },
+    )
+    .unwrap();
+
+    let exchange_rate = Uint128::from(10u128);
+    let sale_amount = Uint128::from(100u128);
+    SALE.save(
+        deps.as_mut().storage,
+        &exchange_asset.to_string(),
+        &Sale {
+            amount: sale_amount,
+            exchange_rate,
+        },
+    )
+    .unwrap();
+
+    let msg = ExecuteMsg::CancelSale {
+        asset: exchange_asset,
+    };
+    let unauthorised_info = mock_info("anyone", &[]);
+
+    let err = execute(deps.as_mut(), env, unauthorised_info, msg).unwrap_err();
+
+    assert_eq!(err, ContractError::Unauthorized {})
+}
+
+#[test]
+pub fn execute_cancel_sale_no_sale() {
+    let env = mock_env();
+    let mut deps = mock_dependencies();
+    let owner = Addr::unchecked("owner");
+    let token_address = Addr::unchecked("cw20");
+    let info = mock_info(owner.as_str(), &[]);
+    let exchange_asset = AssetInfo::Cw20(Addr::unchecked("exchanged_asset"));
+
+    instantiate(
+        deps.as_mut(),
+        env.clone(),
+        info.clone(),
+        InstantiateMsg {
+            token_address: AndrAddress::from_string(token_address.to_string()),
+        },
+    )
+    .unwrap();
+
+    let msg = ExecuteMsg::CancelSale {
+        asset: exchange_asset,
+    };
+
+    let err = execute(deps.as_mut(), env, info, msg).unwrap_err();
+
+    assert_eq!(err, ContractError::NoOngoingSale {})
+}
+
+#[test]
+pub fn execute_cancel_sale() {
+    let env = mock_env();
+    let mut deps = mock_dependencies();
+    let owner = Addr::unchecked("owner");
+    let token_address = Addr::unchecked("cw20");
+    let info = mock_info(owner.as_str(), &[]);
+    let exchange_asset = AssetInfo::Cw20(Addr::unchecked("exchanged_asset"));
+
+    instantiate(
+        deps.as_mut(),
+        env.clone(),
+        info.clone(),
+        InstantiateMsg {
+            token_address: AndrAddress::from_string(token_address.to_string()),
+        },
+    )
+    .unwrap();
+
+    let exchange_rate = Uint128::from(10u128);
+    let sale_amount = Uint128::from(100u128);
+    SALE.save(
+        deps.as_mut().storage,
+        &exchange_asset.to_string(),
+        &Sale {
+            amount: sale_amount,
+            exchange_rate,
+        },
+    )
+    .unwrap();
+
+    let msg = ExecuteMsg::CancelSale {
+        asset: exchange_asset.clone(),
+    };
+
+    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+
+    // Ensure sale has been removed
+    let sale_opt = SALE
+        .may_load(deps.as_mut().storage, &exchange_asset.to_string())
+        .unwrap();
+    assert!(sale_opt.is_none());
+
+    // Ensure any remaining funds are returned
+    let message = res.messages.first().unwrap();
+    let expected_message = SubMsg::reply_on_error(
+        CosmosMsg::Wasm(
+            wasm_execute(
+                "exchanged_asset",
+                &Cw20ExecuteMsg::Transfer {
+                    recipient: owner.to_string(),
+                    amount: sale_amount,
+                },
+                vec![],
+            )
+            .unwrap(),
+        ),
+        1,
+    );
+    assert_eq!(message, &expected_message)
 }
