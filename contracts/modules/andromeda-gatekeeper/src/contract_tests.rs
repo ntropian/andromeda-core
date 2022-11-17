@@ -2,7 +2,7 @@
 mod tests {
     use andromeda_modules::gatekeeper::{
         Authorization, AuthorizationsResponse, ExecuteMsg, InstantiateMsg, QueryMsg,
-        TestExecuteMsg, TestFieldsExecuteMsg, UniversalMsg,
+        TestExecuteMsg, TestFieldsExecuteMsg, TestMsg, UniversalMsg,
     };
     use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
     use cosmwasm_std::{coins, from_binary, to_binary, Api, CosmosMsg, WasmMsg};
@@ -51,7 +51,7 @@ mod tests {
                 identifier: 0u16,
                 actor: Some(deps.api.addr_validate("anyone").unwrap()),
                 contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
-                message_name: Some("test_execute_msg".to_string()),
+                message_name: Some("kessel_run".to_string()),
                 wasmaction_name: Some("MsgExecuteContract".to_string()),
                 fields: None,
             },
@@ -71,7 +71,7 @@ mod tests {
                 actor: Some(deps.api.addr_validate("actor").unwrap()),
                 contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
                 message_name: Some("MsgExecuteContract".to_string()),
-                wasmaction_name: Some("test_execute_msg".to_string()),
+                wasmaction_name: Some("kessel_run".to_string()),
                 fields: None,
             },
         };
@@ -87,57 +87,65 @@ mod tests {
         let msg = QueryMsg::CheckTransaction {
             sender: "anyone".to_string(),
             msg: UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
-                msg: to_binary(&TestExecuteMsg {
-                    foo: "bar".to_string(),
-                })
+                msg: to_binary(&TestMsg::KesselRun(TestExecuteMsg {
+                    parsecs: "14".to_string(),
+                }))
                 .unwrap(),
                 contract_addr: "targetcontract".to_string(),
                 funds: vec![],
             })),
         };
-        let _res = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let res = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let auth_response: AuthorizationsResponse = from_binary(&res).unwrap();
+        assert_eq!(auth_response.authorizations.len(), 0);
 
         // given action should fail if WRONG TARGET CONTRACT
         let msg = QueryMsg::CheckTransaction {
             sender: "actor".to_string(),
             msg: UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
-                msg: to_binary(&TestExecuteMsg {
-                    foo: "bar".to_string(),
-                })
+                msg: to_binary(&TestMsg::KesselRun(TestExecuteMsg {
+                    parsecs: "14".to_string(),
+                }))
                 .unwrap(),
                 contract_addr: "badcontract".to_string(),
                 funds: vec![],
             })),
         };
-        let _res = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let res = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let auth_response: AuthorizationsResponse = from_binary(&res).unwrap();
+        assert_eq!(auth_response.authorizations.len(), 0);
 
         // given action should fail if wrong actor
         let msg = QueryMsg::CheckTransaction {
             sender: "badactor".to_string(),
             msg: UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
-                msg: to_binary(&TestExecuteMsg {
-                    foo: "bar".to_string(),
-                })
+                msg: to_binary(&TestMsg::KesselRun(TestExecuteMsg {
+                    parsecs: "14".to_string(),
+                }))
                 .unwrap(),
                 contract_addr: "targetcontract".to_string(),
                 funds: vec![],
             })),
         };
-        let _res = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let res = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let auth_response: AuthorizationsResponse = from_binary(&res).unwrap();
+        assert_eq!(auth_response.authorizations.len(), 0);
 
         // given action should succeed if contract correct (no field checking yet)
         let msg = QueryMsg::CheckTransaction {
             sender: "actor".to_string(),
             msg: UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
-                msg: to_binary(&TestExecuteMsg {
-                    foo: "bar".to_string(),
-                })
+                msg: to_binary(&TestMsg::KesselRun(TestExecuteMsg {
+                    parsecs: "14".to_string(),
+                }))
                 .unwrap(),
                 contract_addr: "targetcontract".to_string(),
                 funds: vec![],
             })),
         };
-        let _res = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let res = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let auth_response: AuthorizationsResponse = from_binary(&res).unwrap();
+        assert!(auth_response.authorizations.len() > 0);
 
         // unauthorized user cannot remove an authorization
         let info = mock_info("baduser", &coins(2, "token"));
@@ -147,7 +155,7 @@ mod tests {
                 actor: Some(deps.api.addr_validate("actor").unwrap()),
                 contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
                 message_name: Some("MsgExecuteContract".to_string()),
-                wasmaction_name: Some("test_execute_msg".to_string()),
+                wasmaction_name: Some("kessel_run".to_string()),
                 fields: None,
             },
         };
@@ -167,15 +175,17 @@ mod tests {
         let msg = QueryMsg::CheckTransaction {
             sender: "actor".to_string(),
             msg: UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
-                msg: to_binary(&TestExecuteMsg {
-                    foo: "bar".to_string(),
-                })
+                msg: to_binary(&TestMsg::KesselRun(TestExecuteMsg {
+                    parsecs: "14".to_string(),
+                }))
                 .unwrap(),
                 contract_addr: "targetcontract".to_string(),
                 funds: vec![],
             })),
         };
-        let _res = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let res = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let auth_response: AuthorizationsResponse = from_binary(&res).unwrap();
+        assert_eq!(auth_response.authorizations.len(), 0);
     }
 
     #[test]
@@ -207,7 +217,7 @@ mod tests {
                 actor: Some(deps.api.addr_validate("actor").unwrap()),
                 contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
                 message_name: Some("MsgExecuteContract".to_string()),
-                wasmaction_name: Some("test_fields_execute_msg".to_string()),
+                wasmaction_name: Some("kobayashi_maru".to_string()),
                 fields: Some(
                     [
                         ("recipient".to_string(), "picard".to_string()),
@@ -223,23 +233,25 @@ mod tests {
         let msg = QueryMsg::CheckTransaction {
             sender: "actor".to_string(),
             msg: UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
-                msg: to_binary(&TestFieldsExecuteMsg {
+                msg: to_binary(&TestMsg::KobayashiMaru(TestFieldsExecuteMsg {
                     recipient: "picard".to_string(),
                     strategy: "engage".to_string(),
-                })
+                }))
                 .unwrap(),
                 contract_addr: "targetcontract".to_string(),
                 funds: vec![],
             })),
         };
-        let _res = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let res = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let auth_response: AuthorizationsResponse = from_binary(&res).unwrap();
+        assert!(auth_response.authorizations.len() > 0);
 
         // let's remove but with wrong fields specified... should FAIL
         let info = mock_info("owner", &coins(2, "token"));
         let msg = ExecuteMsg::RemoveAuthorization {
             authorization_to_remove: Authorization {
                 identifier: 0u16,
-                wasmaction_name: Some("test_fields_execute_msg".to_string()),
+                wasmaction_name: Some("kobayashi_maru".to_string()),
                 actor: Some(deps.api.addr_validate("actor").unwrap()),
                 contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
                 message_name: Some("MsgExecuteContract".to_string()),
@@ -266,7 +278,7 @@ mod tests {
         let msg = ExecuteMsg::RemoveAuthorization {
             authorization_to_remove: Authorization {
                 identifier: 0u16,
-                wasmaction_name: Some("test_fields_execute_msg".to_string()),
+                wasmaction_name: Some("kobayashi_maru".to_string()),
                 actor: Some(deps.api.addr_validate("actor").unwrap()),
                 contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
                 message_name: Some("MsgExecuteContract".to_string()),
@@ -279,7 +291,6 @@ mod tests {
         let res: AuthorizationsResponse =
             from_binary(&query(deps.as_ref(), mock_env(), query_msg).unwrap()).unwrap();
         assert_eq!(res.authorizations.len(), 0);
-        println!("res: {:?}", res);
 
         // let's test with just strategy, and no qualification on recipient
         let info = mock_info("owner", &coins(2, "token"));
@@ -289,7 +300,7 @@ mod tests {
                 actor: Some(deps.api.addr_validate("actor").unwrap()),
                 contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
                 message_name: Some("MsgExecuteContract".to_string()),
-                wasmaction_name: Some("test_fields_execute_msg".to_string()),
+                wasmaction_name: Some("kobayashi_maru".to_string()),
                 fields: Some([("strategy".to_string(), "engage".to_string())].to_vec()),
             },
         };
@@ -299,31 +310,39 @@ mod tests {
         let msg = QueryMsg::CheckTransaction {
             sender: "actor".to_string(),
             msg: UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
-                msg: to_binary(&TestFieldsExecuteMsg {
+                msg: to_binary(&TestMsg::KobayashiMaru(TestFieldsExecuteMsg {
                     recipient: "picard".to_string(),
                     strategy: "assimmilate".to_string(),
-                })
+                }))
                 .unwrap(),
                 contract_addr: "targetcontract".to_string(),
                 funds: vec![],
             })),
         };
-        let _res = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let res = query(deps.as_ref(), mock_env(), msg).unwrap();
+        println!(
+            "res: {:?}",
+            from_binary::<AuthorizationsResponse>(&res).unwrap()
+        );
+        let auth_response: AuthorizationsResponse = from_binary(&res).unwrap();
+        assert_eq!(auth_response.authorizations.len(), 0);
 
         // succeeds if strategy is allowed
         let msg = QueryMsg::CheckTransaction {
             sender: "actor".to_string(),
             msg: UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
-                msg: to_binary(&TestFieldsExecuteMsg {
+                msg: to_binary(&TestMsg::KobayashiMaru(TestFieldsExecuteMsg {
                     recipient: "picard".to_string(),
                     strategy: "engage".to_string(),
-                })
+                }))
                 .unwrap(),
                 contract_addr: "targetcontract".to_string(),
                 funds: vec![],
             })),
         };
-        let _res = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let res = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let auth_response: AuthorizationsResponse = from_binary(&res).unwrap();
+        assert!(auth_response.authorizations.len() > 0);
 
         // remove succeeds even with more fields specified (denying a more specific auth than exists)
         let info = mock_info("owner", &coins(2, "token"));
@@ -333,7 +352,7 @@ mod tests {
                 actor: Some(deps.api.addr_validate("actor").unwrap()),
                 contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
                 message_name: Some("MsgExecuteContract".to_string()),
-                wasmaction_name: Some("test_fields_execute_msg".to_string()),
+                wasmaction_name: Some("kobayashi_maru".to_string()),
                 fields: Some(
                     [
                         ("recipient".to_string(), "picard".to_string()),
@@ -353,7 +372,7 @@ mod tests {
                 actor: Some(deps.api.addr_validate("actor").unwrap()),
                 contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
                 message_name: Some("MsgExecuteContract".to_string()),
-                wasmaction_name: Some("test_fields_execute_msg".to_string()),
+                wasmaction_name: Some("kobayashi_maru".to_string()),
                 fields: Some([("strategy".to_string(), "engage".to_string())].to_vec()),
             },
         };
@@ -378,7 +397,7 @@ mod tests {
                 actor: Some(deps.api.addr_validate("actor").unwrap()),
                 contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
                 message_name: Some("MsgExecuteContract".to_string()),
-                wasmaction_name: Some("test_fields_execute_msg".to_string()),
+                wasmaction_name: Some("kobayashi_maru".to_string()),
                 fields: Some(
                     [
                         ("recipient".to_string(), "picard".to_string()),
@@ -399,7 +418,7 @@ mod tests {
                 actor: Some(deps.api.addr_validate("actor").unwrap()),
                 contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
                 message_name: Some("MsgExecuteContract".to_string()),
-                wasmaction_name: Some("test_fields_execute_msg".to_string()),
+                wasmaction_name: Some("kobayashi_maru".to_string()),
                 fields: Some(
                     [
                         ("recipient".to_string(), "picard".to_string()),

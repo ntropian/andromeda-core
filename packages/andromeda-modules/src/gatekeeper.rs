@@ -82,8 +82,15 @@ pub struct AuthorizationsResponse {
 
 // For unit tests
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum TestMsg {
+    KesselRun(TestExecuteMsg),
+    KobayashiMaru(TestFieldsExecuteMsg),
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct TestExecuteMsg {
-    pub foo: String,
+    pub parsecs: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

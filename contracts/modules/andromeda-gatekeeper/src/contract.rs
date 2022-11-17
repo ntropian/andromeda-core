@@ -10,6 +10,7 @@ use cosmwasm_std::{
 };
 use cosmwasm_std::{Empty, WasmMsg};
 use cw2::{get_contract_version, set_contract_version};
+use schemars::_private::NoSerialize;
 
 use crate::state::{is_owner, COUNTER, OWNER};
 use crate::{error::ContractError, state::authorizations};
@@ -175,6 +176,7 @@ fn get_authorizations_with_idx(
     // on which filters will be used more often.
     let mut working_auths: Vec<(Vec<u8>, Authorization)>;
     let match_auth = authorization.clone();
+    println!("match_auth: {:?}", match_auth);
     match match_auth.actor {
         None => {
             match match_auth.contract {
@@ -285,7 +287,7 @@ fn get_authorizations_with_idx(
     if let Some(msg) = msg {
         // in this case, Nones are a go ahead!
         let mut none_auths = working_auths.clone();
-        none_auths.retain(|item| item.1.fields != None);
+        none_auths.retain(|item| item.1.fields == None);
         if !none_auths.is_empty() {
             // just return here as we have authorization(s) that don't require fields
             // note that this means the a caller is not guaranteed a complete list of
@@ -298,10 +300,19 @@ fn get_authorizations_with_idx(
         }
         let msg_value: Value = serde_json_wasm::from_slice(&msg)?;
         let msg_obj: &serde_json_value_wasm::Map<String, Value> = match msg_value.as_object() {
-            Some(obj) => obj,
+            Some(obj) => {
+                if obj.keys().len() > 1 {
+                    return Err(ContractError::TooManyMessages {});
+                } else {
+                    // unsafe unwraps for now
+                    let key = obj.keys().next().unwrap();
+                    obj[key].as_object().unwrap()
+                }
+            }
             None => return Err(ContractError::Unauthorized {}),
         };
         check_authorizations_against_fields(&mut working_auths, msg_obj)?;
+        println!("resulting working_auths: {:?}", working_auths);
     }
     Ok(AuthorizationsResponse {
         authorizations: working_auths,
@@ -319,7 +330,9 @@ pub fn check_authorizations_against_fields(
     working_auths: &mut Vec<(Vec<u8>, Authorization)>,
     msg_obj: &serde_json_value_wasm::Map<String, Value>,
 ) -> Result<(), ContractError> {
-    #[allow(unused_assignments)]
+    println!("check_authorizations_against_fields");
+    println!("msg_obj: {:?}", msg_obj);
+    println!("working_auths: {:?}", working_auths);
     for mut auth_count in 0..working_auths.len() {
         // we're editing working_auths in place, not iterating,
         // so make sure we're not at the end...
@@ -333,18 +346,32 @@ pub fn check_authorizations_against_fields(
                 'inner: for kv in 0..vals.len() {
                     let this_key: String = vals[kv].clone().0;
                     let this_value: String = vals[kv].clone().1;
+                    println!(
+                        "searching for: {:?} in {:?}",
+                        this_key.clone(),
+                        msg_obj.clone()
+                    );
                     if msg_obj.contains_key(&this_key) {
                         if msg_obj[&this_key] != this_value && kv == vals.len() - 1 {
                             // remove this auth from results, since its field mismatches
                             // still to be implemented: range and != matching logic
-                            working_auths.retain(|item| item.0 != this_idx);
+                            working_auths.retain(|item| {
+                                println!("item.0: {:?}", item.0);
+                                println!("this_idx: {:?}", this_idx);
+                                item.0 != this_idx
+                            });
                             auth_count = auth_count.saturating_sub(1);
                             break 'inner;
                         }
                         // else, keep this auth
                     } else {
                         // remove this auth from results, since it doesn't include the required field
-                        working_auths.retain(|item| item.0 != this_idx);
+                        working_auths.retain(|item| {
+                            println!("field missing retain");
+                            println!("item.0: {:?}", item.0);
+                            println!("this_idx: {:?}", this_idx);
+                            item.0 != this_idx
+                        });
                         auth_count = auth_count.saturating_sub(1);
                         break 'inner;
                     }

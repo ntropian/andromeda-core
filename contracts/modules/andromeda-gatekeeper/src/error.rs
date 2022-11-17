@@ -29,6 +29,9 @@ pub enum ContractError {
     #[error("No authorization for target contract, found in {loc:?}")]
     NoSuchAuthorization { loc: String },
 
+    #[error("Too many submessages in JSON (incorrect batching)")]
+    TooManyMessages {},
+
     #[error("Field mismatch: field {key:?} must contain parameter {value:?}")]
     FieldMismatch { key: String, value: String },
 
