@@ -1,6 +1,6 @@
-use cosmwasm_std::{Addr, Uint128, StdResult, Storage};
-use cw_storage_plus::{UniqueIndex, Item};
+use cosmwasm_std::{Addr, StdResult, Storage, Uint128};
 use cw_storage_plus::{Index, IndexList, IndexedMap, MultiIndex};
+use cw_storage_plus::{Item, UniqueIndex};
 
 use andromeda_modules::gatekeeper::Authorization;
 
@@ -15,7 +15,13 @@ pub struct AuthorizationIndexes<'a> {
 
 impl<'a> IndexList<Authorization> for AuthorizationIndexes<'a> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Authorization>> + '_> {
-        let v: Vec<&dyn Index<Authorization>> = vec![&self.identifier, &self.actor, &self.contract, &self.message_name, &self.wasmaction_name];
+        let v: Vec<&dyn Index<Authorization>> = vec![
+            &self.identifier,
+            &self.actor,
+            &self.contract,
+            &self.message_name,
+            &self.wasmaction_name,
+        ];
         Box::new(v.into_iter())
     }
 }
@@ -30,32 +36,32 @@ const AUTHORIZATIONS_MESSAGE_NAMES_KEY: &str = "auths__message_names";
 const AUTHORIZATIONS_WASMACTION_NAMES_KEY: &str = "auths__wasmaction_names";
 
 pub fn authorizations<'a>() -> IndexedMap<'a, &'a [u8], Authorization, AuthorizationIndexes<'a>> {
-    IndexedMap::new(AUTHORIZATIONS_KEY, AuthorizationIndexes {
-        identifier: UniqueIndex::new(
-            |d| d.identifier.clone(),
-            AUTHORIZATIONS_UNIQUE_KEYS,
-        ),
-        actor: MultiIndex::new(
-            |d| (d.actor.clone().unwrap()),
-            AUTHORIZATIONS_KEY,
-            AUTHORIZATIONS_ACTORS_KEY,
-        ),
-        contract: MultiIndex::new(
-            |d| (d.contract.clone().unwrap()),
-            AUTHORIZATIONS_KEY,
-            AUTHORIZATIONS_CONTRACTS_KEY,
-        ),
-        message_name: MultiIndex::new(
-            |d| (d.message_name.clone().unwrap()),
-            AUTHORIZATIONS_KEY,
-            AUTHORIZATIONS_MESSAGE_NAMES_KEY,
-        ),
-        wasmaction_name: MultiIndex::new(
-            |d| (d.wasmaction_name.clone().unwrap()),
-            AUTHORIZATIONS_KEY,
-            AUTHORIZATIONS_WASMACTION_NAMES_KEY,
-        ),
-    })
+    IndexedMap::new(
+        AUTHORIZATIONS_KEY,
+        AuthorizationIndexes {
+            identifier: UniqueIndex::new(|d| d.identifier.clone(), AUTHORIZATIONS_UNIQUE_KEYS),
+            actor: MultiIndex::new(
+                |d| (d.actor.clone().unwrap()),
+                AUTHORIZATIONS_KEY,
+                AUTHORIZATIONS_ACTORS_KEY,
+            ),
+            contract: MultiIndex::new(
+                |d| (d.contract.clone().unwrap()),
+                AUTHORIZATIONS_KEY,
+                AUTHORIZATIONS_CONTRACTS_KEY,
+            ),
+            message_name: MultiIndex::new(
+                |d| (d.message_name.clone().unwrap()),
+                AUTHORIZATIONS_KEY,
+                AUTHORIZATIONS_MESSAGE_NAMES_KEY,
+            ),
+            wasmaction_name: MultiIndex::new(
+                |d| (d.wasmaction_name.clone().unwrap()),
+                AUTHORIZATIONS_KEY,
+                AUTHORIZATIONS_WASMACTION_NAMES_KEY,
+            ),
+        },
+    )
 }
 
 pub const COUNTER: Item<Uint128> = Item::new(AUTH_COUNT_KEY);

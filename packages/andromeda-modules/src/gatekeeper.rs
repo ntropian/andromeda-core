@@ -1,11 +1,11 @@
-use common::ado_base::{hooks::AndromedaHook, AndromedaQuery, AndromedaMsg};
+use common::ado_base::{hooks::AndromedaHook, AndromedaMsg, AndromedaQuery};
 use cosmwasm_std::{Addr, Binary, Coin, CosmosMsg};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Authorization {
-    pub identifier: u16, 
+    pub identifier: u16,
     pub actor: Option<Addr>,
     pub contract: Option<Addr>,
     pub message_name: Option<String>,
@@ -63,7 +63,7 @@ pub enum QueryMsg {
     },
     // Check whether specific message(s) is/are authorized
     CheckTransaction {
-        msgs: Vec<UniversalMsg>,
+        msg: UniversalMsg,
         sender: String,
     },
     AndrHook(AndromedaHook),
@@ -77,7 +77,7 @@ pub enum MigrateMsg {}
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct AuthorizationsResponse {
-    pub authorizations: Vec<(Vec<u8>, Authorization)>
+    pub authorizations: Vec<(Vec<u8>, Authorization)>,
 }
 
 // For unit tests

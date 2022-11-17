@@ -36,7 +36,9 @@ pub enum ContractError {
     MissingRequiredField { key: String, value: String },
 
     #[error("Multiple matching authorizations. Please be more specific or use rm_all_matching_authorizations. Found: {vector:?}")]
-    MultipleMatchingAuthorizations {vector: Vec<(Vec<u8>,Authorization)>},
+    MultipleMatchingAuthorizations {
+        vector: Vec<(Vec<u8>, Authorization)>,
+    },
 
     #[error("Custom Error val: {val:?}")]
     CustomError { val: String },

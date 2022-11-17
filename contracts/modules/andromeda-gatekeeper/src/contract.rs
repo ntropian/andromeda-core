@@ -8,10 +8,10 @@ use cosmwasm_std::{
     ensure, to_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response,
     StdError, StdResult, Uint128,
 };
-use cosmwasm_std::{from_binary, Empty, WasmMsg};
+use cosmwasm_std::{Empty, WasmMsg};
 use cw2::{get_contract_version, set_contract_version};
 
-use crate::state::{COUNTER, OWNER, is_owner};
+use crate::state::{is_owner, COUNTER, OWNER};
 use crate::{error::ContractError, state::authorizations};
 use ado_base::ADOContract;
 use common::{
@@ -20,7 +20,7 @@ use common::{
 };
 use cw_storage_plus::Bound;
 use semver::Version;
-use serde_json_value_wasm::{Value, Map};
+use serde_json_value_wasm::{Map, Value};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:andromeda-gatekeeper";
@@ -162,7 +162,9 @@ fn get_authorizations_with_idx(
             .item(deps.storage, authorization.identifier)?;
         return match auth {
             None => Err(ContractError::NoSuchAuthorization {}),
-            Some(res) => Ok(AuthorizationsResponse { authorizations: vec![res] }),
+            Some(res) => Ok(AuthorizationsResponse {
+                authorizations: vec![res],
+            }),
         };
     }
 
@@ -185,38 +187,45 @@ fn get_authorizations_with_idx(
                                             return Ok(AuthorizationsResponse { authorizations: authorizations().range(deps.storage, None, None, Order::Ascending).collect::<StdResult<Vec<(Vec<u8>, Authorization)>>>()
                                                 .map_err(|e| ContractError::Std(e))?});
                                         }
-                                        Some(_) =>  working_auths = authorizations()
-                                        .range(deps.storage, None, None, Order::Ascending)
-                                        .collect::<StdResult<Vec<(Vec<u8>, Authorization)>>>()?,
+                                        Some(_) => working_auths = authorizations()
+                                            .range(deps.storage, None, None, Order::Ascending)
+                                            .collect::<StdResult<Vec<(Vec<u8>, Authorization)>>>(
+                                            )?,
                                     }
                                 }
                                 // some wasmaction_name
-                                Some(name) => working_auths = authorizations()
-                                .idx
-                                .wasmaction_name
-                                .prefix(name)
-                                .range(deps.storage, None, None, Order::Ascending)
-                                .collect::<StdResult<Vec<(Vec<u8>, Authorization)>>>()?,
+                                Some(name) => {
+                                    working_auths = authorizations()
+                                        .idx
+                                        .wasmaction_name
+                                        .prefix(name)
+                                        .range(deps.storage, None, None, Order::Ascending)
+                                        .collect::<StdResult<Vec<(Vec<u8>, Authorization)>>>()?
+                                }
                             }
                         }
                         // some message_name
-                        Some(name) => working_auths = authorizations()
-                        .idx
-                        .message_name
-                        .prefix(name)
-                        .range(deps.storage, None, None, Order::Ascending)
-                        .collect::<StdResult<Vec<(Vec<u8>, Authorization)>>>()?,
+                        Some(name) => {
+                            working_auths = authorizations()
+                                .idx
+                                .message_name
+                                .prefix(name)
+                                .range(deps.storage, None, None, Order::Ascending)
+                                .collect::<StdResult<Vec<(Vec<u8>, Authorization)>>>()?
+                        }
                     }
                 }
                 // some contract
-                Some(addy) => working_auths = authorizations()
-                    .idx
-                    .contract
-                    .prefix(addy)
-                    .range(deps.storage, None, None, Order::Ascending)
-                    .collect::<StdResult<Vec<(Vec<u8>, Authorization)>>>()?,
+                Some(addy) => {
+                    working_auths = authorizations()
+                        .idx
+                        .contract
+                        .prefix(addy)
+                        .range(deps.storage, None, None, Order::Ascending)
+                        .collect::<StdResult<Vec<(Vec<u8>, Authorization)>>>()?
+                }
             }
-        },
+        }
         // some actor
         Some(addy) => {
             working_auths = authorizations()
@@ -230,13 +239,19 @@ fn get_authorizations_with_idx(
 
     // Now we can filter down our base
     if let Some(addy) = authorization.contract {
-        process_auths(&mut working_auths, |auth| auth.contract == Some(addy.clone()));
+        process_auths(&mut working_auths, |auth| {
+            auth.contract == Some(addy.clone())
+        });
     }
     if let Some(name) = authorization.message_name {
-        process_auths(&mut working_auths, |auth| auth.message_name == Some(name.clone()));
+        process_auths(&mut working_auths, |auth| {
+            auth.message_name == Some(name.clone())
+        });
     }
     if let Some(name) = authorization.wasmaction_name {
-        process_auths(&mut working_auths, |auth| auth.wasmaction_name == Some(name.clone()));
+        process_auths(&mut working_auths, |auth| {
+            auth.wasmaction_name == Some(name.clone())
+        });
     }
 
     // The final filter, by fields, is most complex.
@@ -249,15 +264,15 @@ fn get_authorizations_with_idx(
             .into_iter()
             .map(|(k, v)| (k, Value::String(v)))
             .collect();
-        
+
         // first let's strip any Nones
-        working_auths.retain(|item| item.1.fields != None );
+        working_auths.retain(|item| item.1.fields != None);
 
         // if anything remains, iterate through
         if working_auths.len() < 1 {
             return Err(ContractError::NoSuchAuthorization {});
         } else {
-            check_authorizations_against_fields(&mut working_auths, &msg_obj);
+            check_authorizations_against_fields(&mut working_auths, &msg_obj)?;
         }
     }
 
@@ -266,23 +281,27 @@ fn get_authorizations_with_idx(
     if let Some(msg) = msg {
         // in this case, Nones are a go ahead!
         let mut none_auths = working_auths.clone();
-        none_auths.retain(|item| item.1.fields != None );
+        none_auths.retain(|item| item.1.fields != None);
         if none_auths.len() > 0 {
             // just return here as we have authorization(s) that don't require fields
             // note that this means the a caller is not guaranteed a complete list of
             // applicable authorizations: returning an authorization may have other utilities,
             // but to find all matching authorizations, `authorization` param should be used
             // instead of `msg`
-            return Ok(AuthorizationsResponse { authorizations: none_auths })
+            return Ok(AuthorizationsResponse {
+                authorizations: none_auths,
+            });
         }
         let msg_value: Value = serde_json_wasm::from_slice(&msg)?;
         let msg_obj: &serde_json_value_wasm::Map<String, Value> = match msg_value.as_object() {
             Some(obj) => obj,
             None => return Err(ContractError::Unauthorized {}),
         };
-        check_authorizations_against_fields(&mut working_auths, msg_obj);
+        check_authorizations_against_fields(&mut working_auths, msg_obj)?;
     }
-    Ok(AuthorizationsResponse { authorizations: working_auths })
+    Ok(AuthorizationsResponse {
+        authorizations: working_auths,
+    })
 }
 
 pub fn process_auths(
@@ -292,7 +311,10 @@ pub fn process_auths(
     auths.retain(|item| predicate(item.1.clone()));
 }
 
-pub fn check_authorizations_against_fields(working_auths: &mut Vec<(Vec<u8>,Authorization)>, msg_obj: &serde_json_value_wasm::Map<String, Value>) -> Result<(), ContractError> {
+pub fn check_authorizations_against_fields(
+    working_auths: &mut Vec<(Vec<u8>, Authorization)>,
+    msg_obj: &serde_json_value_wasm::Map<String, Value>,
+) -> Result<(), ContractError> {
     #[allow(unused_assignments)]
     for mut auth_count in 0..working_auths.len() {
         // we're editing working_auths in place, not iterating,
@@ -326,7 +348,9 @@ pub fn check_authorizations_against_fields(working_auths: &mut Vec<(Vec<u8>,Auth
             }
             None => {
                 // unreachable in runtime as Nones have been stripped
-                panic!("None encountered when no Nones are expected");
+                return Err(ContractError::CustomError {
+                    val: "None encountered when no Nones are expected".to_string(),
+                });
                 // working_auths.retain(|item| item.0 != working_auths[auth_count].0);
             }
         }
@@ -353,8 +377,10 @@ pub fn rm_authorization(
         1 => {
             authorizations().remove(deps.storage, &found_auth_key.authorizations[0].0)?;
             Ok(Response::default())
-        },
-        _ => Err(ContractError::MultipleMatchingAuthorizations {vector: found_auth_key.authorizations}),
+        }
+        _ => Err(ContractError::MultipleMatchingAuthorizations {
+            vector: found_auth_key.authorizations,
+        }),
     }
 }
 
@@ -372,30 +398,34 @@ pub fn rm_all_matching_authorizations(
         Err(_) => return Err(ContractError::NoSuchAuthorization {}),
         Ok(key) => key,
     };
-    for key in found_auth_key.authorizations{
+    for key in found_auth_key.authorizations {
         authorizations().remove(deps.storage, &key.0)?;
     }
     Ok(Response::default())
 }
 
-pub fn check_msgs(
+#[allow(unused_variables)]
+pub fn check_msg(
     deps: Deps,
     sender: Addr,
-    msgs: Vec<UniversalMsg>,
-) -> Result<bool, ContractError> {
-    for msg in msgs.into_iter() {
-        if !check_msg(deps, sender.clone(), msg)? {
-            return Ok(false);
-        }
-    }
-    Ok(true)
-}
-
-pub fn check_msg(deps: Deps, sender: Addr, msg: UniversalMsg) -> Result<bool, ContractError> {
+    msg: UniversalMsg,
+) -> Result<AuthorizationsResponse, ContractError> {
     match msg {
-        UniversalMsg::Andromeda(msg) => {
-            todo!()
-        }
+        UniversalMsg::Andromeda(msg) => match msg {
+            common::ado_base::AndromedaMsg::Receive(_) => todo!(),
+            common::ado_base::AndromedaMsg::UpdateOwner { address } => todo!(),
+            common::ado_base::AndromedaMsg::UpdateOperators { operators } => todo!(),
+            common::ado_base::AndromedaMsg::UpdateAppContract { address } => todo!(),
+            common::ado_base::AndromedaMsg::Withdraw {
+                recipient,
+                tokens_to_withdraw,
+            } => todo!(),
+            common::ado_base::AndromedaMsg::RegisterModule { module } => todo!(),
+            common::ado_base::AndromedaMsg::DeregisterModule { module_idx } => todo!(),
+            common::ado_base::AndromedaMsg::AlterModule { module_idx, module } => todo!(),
+            common::ado_base::AndromedaMsg::RefreshAddress { contract } => todo!(),
+            common::ado_base::AndromedaMsg::RefreshAddresses { limit, start_after } => todo!(),
+        },
         UniversalMsg::Legacy(msg) => {
             match msg {
                 cosmwasm_std::CosmosMsg::Bank(_) => todo!(),
@@ -409,22 +439,31 @@ pub fn check_msg(deps: Deps, sender: Addr, msg: UniversalMsg) -> Result<bool, Co
                         WasmMsg::Execute {
                             contract_addr,
                             msg,
-                            funds,
+                            funds: _,
                         } => {
-                            check_wasm_msg(
+                            return check_wasm_msg(
                                 deps,
-                                deps.api.addr_validate(&contract_addr)?,
+                                Some(deps.api.addr_validate(&contract_addr)?),
                                 sender,
                                 msg,
+                                "MsgExecuteContract".to_string(),
                             );
                         }
                         WasmMsg::Instantiate {
-                            admin,
-                            code_id,
+                            admin: _,
+                            code_id: _,
                             msg,
-                            funds,
-                            label,
-                        } => todo!(),
+                            funds: _,
+                            label: _,
+                        } => {
+                            return check_wasm_msg(
+                                deps,
+                                None,
+                                sender,
+                                msg,
+                                "MsgInstantiateContract".to_string(),
+                            );
+                        }
                         WasmMsg::Migrate {
                             contract_addr,
                             new_code_id,
@@ -443,25 +482,43 @@ pub fn check_msg(deps: Deps, sender: Addr, msg: UniversalMsg) -> Result<bool, Co
             };
         }
     }
-    Ok(true)
 }
 
 /// Checks a WasmMsg::Execute (MsgExecuteContract) against authorizations table.
-/// Returns true if matching authorization found. If not found, returns an error
-/// rather than false, since the error type provides additional information that
-/// may be useful to the caller.
+/// Returns any matching authorizations.
 pub fn check_wasm_msg(
     deps: Deps,
-    target_contract: Addr,
+    target_contract: Option<Addr>,
     sender: Addr,
     msg: Binary,
-) -> Result<bool, ContractError> {
-    let wasm_msg: WasmMsg = from_binary(&msg)?;
-    // check there is an authorization for this contract
-
-
-    
-    Ok(true)
+    message_name: String,
+) -> Result<AuthorizationsResponse, ContractError> {
+    let msg_value: Value = serde_json_wasm::from_slice(&msg)?;
+    let msg_obj: &serde_json_value_wasm::Map<String, Value> = match msg_value.as_object() {
+        Some(obj) => obj,
+        None => return Err(ContractError::Unauthorized {}),
+    };
+    let wasmaction_name = Some(match msg_obj.keys().next() {
+        Some(key) => key.to_string(),
+        None => {
+            return Err(ContractError::CustomError {
+                val: "No execute message contents".to_string(),
+            })
+        }
+    });
+    let auths = get_authorizations_with_idx(
+        deps,
+        Authorization {
+            identifier: 0u16,
+            actor: Some(sender),
+            contract: target_contract,
+            wasmaction_name,
+            message_name: Some(message_name),
+            fields: None,
+        },
+        Some(msg),
+    )?;
+    Ok(auths)
 }
 
 pub fn maybe_addr(api: &dyn Api, human: Option<String>) -> StdResult<Option<Addr>> {
@@ -481,23 +538,19 @@ pub fn query_authorizations(
     let start_addr = maybe_addr(deps.api, start_after)?;
     let start = start_addr.map(|addr| Bound::exclusive(addr.as_ref()));
     let authorizations = match target_contract {
-        None => {
-            authorizations()
-                .range(deps.storage, start_raw, None, Order::Ascending)
-                .take(limit)
-                .map(|item| item.unwrap() )
-                .collect::<Vec<(Vec<u8>, Authorization)>>()
-        }
-        Some(target) => {
-            authorizations()
-                .idx
-                .contract
-                .prefix(deps.api.addr_validate(&target)?)
-                .range(deps.storage, start, None, Order::Ascending)
-                .take(limit)
-                .map(|item| item.unwrap() )
-                .collect::<Vec<(Vec<u8>, Authorization)>>()
-        }
+        None => authorizations()
+            .range(deps.storage, start_raw, None, Order::Ascending)
+            .take(limit)
+            .map(|item| item.unwrap())
+            .collect::<Vec<(Vec<u8>, Authorization)>>(),
+        Some(target) => authorizations()
+            .idx
+            .contract
+            .prefix(deps.api.addr_validate(&target)?)
+            .range(deps.storage, start, None, Order::Ascending)
+            .take(limit)
+            .map(|item| item.unwrap())
+            .collect::<Vec<(Vec<u8>, Authorization)>>(),
     };
     Ok(AuthorizationsResponse { authorizations })
 }
@@ -573,23 +626,23 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, common::erro
                 common::error::ContractError::Std(StdError::GenericErr { msg: e.to_string() })
             })?,
         )?),
-        QueryMsg::CheckTransaction { msgs, sender } => {
-            to_binary(&check_msgs(deps, deps.api.addr_validate(&sender)?, msgs).map_err(|e| {
+        QueryMsg::CheckTransaction { msg, sender } => to_binary(
+            &check_msg(deps, deps.api.addr_validate(&sender)?, msg).map_err(|e| {
                 common::error::ContractError::Std(StdError::GenericErr { msg: e.to_string() })
-            })?)
-            .map_err(|e| {
-                common::error::ContractError::Std(StdError::GenericErr { msg: e.to_string() })
-            })
-        }
+            })?,
+        )
+        .map_err(|e| {
+            common::error::ContractError::Std(StdError::GenericErr { msg: e.to_string() })
+        }),
     }
 }
 
 fn handle_andr_hook(
-    deps: Deps,
+    _deps: Deps,
     msg: AndromedaHook,
 ) -> Result<Binary, common::error::ContractError> {
     match msg {
-        AndromedaHook::OnExecute { sender, .. } => {
+        AndromedaHook::OnExecute { sender: _, .. } => {
             Ok(to_binary(&Empty {})?) //todo
         }
         _ => Ok(to_binary(&None::<Response>)?),
@@ -603,418 +656,9 @@ fn handle_andromeda_query(
 ) -> Result<Binary, common::error::ContractError> {
     match msg {
         AndromedaQuery::Get(data) => {
-            let authorization: Authorization = parse_message(&data)?;
+            let _authorization: Authorization = parse_message(&data)?;
             encode_binary(&Empty {})
         }
         _ => ADOContract::default().query(deps, env, msg, query),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use andromeda_modules::gatekeeper::{TestExecuteMsg, TestFieldsExecuteMsg};
-
-    use super::*;
-    use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_binary, Api, CosmosMsg};
-
-    #[test]
-    fn proper_initialization() {
-        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
-
-        let msg = InstantiateMsg {
-            owner: "owner".to_string(),
-        };
-        let info = mock_info("creator", &coins(1000, "earth"));
-
-        // we can just call .unwrap() to assert this was a success
-        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-        assert_eq!(0, res.messages.len());
-    }
-
-    #[test]
-    fn add_authorization() {
-        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
-
-        let query_msg = QueryMsg::Authorizations {
-            identifier: Some(0u16),
-            actor: None,
-            fields: None,
-            message_name: None,
-            wasmaction_name: None,
-            target_contract: Some("targetcontract".to_string()),
-            limit: None,
-            start_after: None,
-        };
-
-        let msg = InstantiateMsg {
-            owner: "owner".to_string(),
-        };
-        let info = mock_info("user", &coins(2, "token"));
-        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // non-operator cannot add authorization
-        let info = mock_info("anyone", &coins(2, "token"));
-        let msg = ExecuteMsg::AddAuthorization {
-            new_authorization: Authorization {
-                identifier: 0u16,
-                actor: Some(deps.api.addr_validate("anyone").unwrap()),
-                contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
-                message_name: Some("test_execute_msg".to_string()),
-                wasmaction_name: Some("MsgExecuteContract".to_string()),
-                fields: None,
-            },
-        };
-        let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
-
-        // zero authorizations
-        let raw_res = query(deps.as_ref(), mock_env(), query_msg.clone());
-        let res: AuthorizationsResponse =
-            from_binary(&raw_res.unwrap()).unwrap();
-        assert_eq!(res.authorizations.len(), 0);
-
-        // operator can add authorization
-        let info = mock_info("owner", &coins(2, "token"));
-        let msg = ExecuteMsg::AddAuthorization {
-            new_authorization: Authorization {
-                identifier: 0u16,
-                actor: Some(deps.api.addr_validate("actor").unwrap()),
-                contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
-                message_name: Some("test_execute_msg".to_string()),
-                wasmaction_name: Some("MsgExecuteContract".to_string()),
-                fields: None,
-            },
-        };
-        let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // now one authorization
-        let res: AuthorizationsResponse =
-            from_binary(&query(deps.as_ref(), mock_env(), query_msg.clone()).unwrap()).unwrap();
-        assert_eq!(res.authorizations.len(), 1);
-        println!("res: {:?}", res);
-
-        // given action should fail if NOT BY ACTOR
-        let msg = QueryMsg::CheckTransaction {
-            sender: "anyone".to_string(),
-            msgs: vec![UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute{
-                msg: to_binary(&TestExecuteMsg { 
-                foo: "bar".to_string()
-                }).unwrap(),
-                contract_addr: "targetcontract".to_string(),
-                funds: vec![],
-            }))],
-        };
-        let _res = query(deps.as_ref(), mock_env(), msg).unwrap();
-
-        // given action should fail if WRONG TARGET CONTRACT
-        let msg = QueryMsg::CheckTransaction {
-            sender: "actor".to_string(),
-            msgs: vec![UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute{
-                msg: to_binary(&TestExecuteMsg { 
-                foo: "bar".to_string()
-                }).unwrap(),
-                contract_addr: "badcontract".to_string(),
-                funds: vec![],
-            }))],
-        };
-        let _res = query(deps.as_ref(), mock_env(), msg).unwrap();
-
-        // given action should fail if wrong actor
-        let msg = QueryMsg::CheckTransaction {
-            sender: "badactor".to_string(),
-            msgs: vec![UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute{
-                msg: to_binary(&TestExecuteMsg { 
-                foo: "bar".to_string()
-                }).unwrap(),
-                contract_addr: "targetcontract".to_string(),
-                funds: vec![],
-            }))],
-        };
-        let _res = query(deps.as_ref(), mock_env(), msg).unwrap();
-
-        // given action should succeed if contract correct (no field checking yet)
-        let msg = QueryMsg::CheckTransaction {
-            sender: "actor".to_string(),
-            msgs: vec![UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute{
-                msg: to_binary(&TestExecuteMsg { 
-                foo: "bar".to_string()
-                }).unwrap(),
-                contract_addr: "targetcontract".to_string(),
-                funds: vec![],
-            }))],
-        };
-        let _res = query(deps.as_ref(), mock_env(), msg).unwrap();
-
-        // unauthorized user cannot remove an authorization
-        let info = mock_info("baduser", &coins(2, "token"));
-        let msg = ExecuteMsg::RemoveAuthorization {
-            authorization_to_remove: Authorization {
-                identifier: 0u16,
-                actor: Some(deps.api.addr_validate("actor").unwrap()),
-                contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
-                message_name: Some("test_execute_msg".to_string()),
-                wasmaction_name: Some("MsgExecuteContract".to_string()),
-                fields: None,
-            },
-        };
-        let _res = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap_err();
-
-        // let's remove an authorization successfully now
-        let info = mock_info("owner", &coins(2, "token"));
-        let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // now zero authorizations
-        let res: AuthorizationsResponse =
-            from_binary(&query(deps.as_ref(), mock_env(), query_msg).unwrap()).unwrap();
-        assert_eq!(res.authorizations.len(), 0);
-        println!("res: {:?}", res);
-
-        //and action fails where before it succeeded
-        let msg = QueryMsg::CheckTransaction {
-            sender: "actor".to_string(),
-            msgs: vec![UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute{
-                msg: to_binary(&TestExecuteMsg { 
-                foo: "bar".to_string()
-                }).unwrap(),
-                contract_addr: "targetcontract".to_string(),
-                funds: vec![],
-            }))],
-        };
-        let _res = query(deps.as_ref(), mock_env(), msg).unwrap();
-    }
-
-    #[test]
-    fn authorization_fields() {
-        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
-
-        let query_msg = QueryMsg::Authorizations {
-            identifier: None,
-            wasmaction_name: None,
-            message_name: None,
-            fields: None,
-            actor: None,
-            target_contract: Some("targetcontract".to_string()),
-            limit: None,
-            start_after: None,
-        };
-
-        let msg = InstantiateMsg {
-            owner: "owner".to_string(),
-        };
-        let info = mock_info("creator", &coins(2, "token"));
-        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // add authorization with fields
-        let info = mock_info("owner", &coins(2, "token"));
-        let msg = ExecuteMsg::AddAuthorization {
-            new_authorization: Authorization {
-                identifier: 0u16,
-                actor: Some(deps.api.addr_validate("actor").unwrap()),
-                contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
-                message_name: Some("test_fields_execute_msg".to_string()),
-                wasmaction_name: Some("MsgExecuteContract".to_string()),
-                fields: Some(
-                    [
-                        ("recipient".to_string(), "picard".to_string()),
-                        ("strategy".to_string(), "engage".to_string()),
-                    ]
-                    .to_vec(),
-                ),
-            },
-        };
-        let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // given action should succeed if contract correct
-        let msg = QueryMsg::CheckTransaction {
-            sender: "actor".to_string(),
-            msgs: vec![UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute{
-                msg: to_binary(&TestFieldsExecuteMsg {
-                    recipient: "picard".to_string(),
-                    strategy: "engage".to_string(),
-                }).unwrap(),
-                contract_addr: "targetcontract".to_string(),
-                funds: vec![],
-            }))],
-        };
-        let _res = query(deps.as_ref(), mock_env(), msg).unwrap();
-
-        // let's remove but with wrong fields specified... should FAIL
-        let info = mock_info("owner", &coins(2, "token"));
-        let msg = ExecuteMsg::RemoveAuthorization {
-            authorization_to_remove: Authorization {
-                identifier: 0u16,
-                wasmaction_name: Some("MsgExecuteContract".to_string()),
-                actor: Some(deps.api.addr_validate("actor").unwrap()),
-                contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
-                message_name: Some("test_fields_execute_msg".to_string()),
-                fields: Some(
-                    [
-                        ("recipient".to_string(), "picard".to_string()),
-                        ("tactic".to_string(), "engage".to_string()),
-                    ]
-                    .to_vec(),
-                ),
-            },
-        };
-        let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
-        
-        // still one authorization
-        let res: AuthorizationsResponse =
-            from_binary(&query(deps.as_ref(), mock_env(), query_msg.clone()).unwrap()).unwrap();
-        assert_eq!(res.authorizations.len(), 1);
-        println!("res: {:?}", res);
-
-        // let's remove the authorization with no field checking... should SUCCEED
-        // tbd: maybe we want this to fail
-        let info = mock_info("owner", &coins(2, "token"));
-        let msg = ExecuteMsg::RemoveAuthorization {
-            authorization_to_remove: Authorization {
-                identifier: 0u16,
-                wasmaction_name: Some("MsgExecuteContract".to_string()),
-                actor: Some(deps.api.addr_validate("actor").unwrap()),
-                contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
-                message_name: Some("test_fields_execute_msg".to_string()),
-                fields: None,
-            },
-        };
-        let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // now zero authorizations
-        let res: AuthorizationsResponse =
-            from_binary(&query(deps.as_ref(), mock_env(), query_msg).unwrap()).unwrap();
-        assert_eq!(res.authorizations.len(), 0);
-        println!("res: {:?}", res);
-
-        // let's test with just strategy, and no qualification on recipient
-        let info = mock_info("owner", &coins(2, "token"));
-        let msg = ExecuteMsg::AddAuthorization {
-            new_authorization: Authorization {
-                identifier: 0u16,
-                actor: Some(deps.api.addr_validate("actor").unwrap()),
-                contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
-                message_name: Some("test_fields_execute_msg".to_string()),
-                wasmaction_name: Some("MsgExecuteContract".to_string()),
-                fields: Some([("strategy".to_string(), "engage".to_string())].to_vec()),
-            },
-        };
-        let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // fails if strategy is wrong
-        let msg = QueryMsg::CheckTransaction {
-            sender: "actor".to_string(),
-            msgs: vec![UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute{
-                msg: to_binary(&TestFieldsExecuteMsg {
-                    recipient: "picard".to_string(),
-                    strategy: "assimmilate".to_string(),
-                }).unwrap(),
-                contract_addr: "targetcontract".to_string(),
-                funds: vec![],
-            }))],
-        };
-        let _res = query(deps.as_ref(), mock_env(), msg).unwrap();
-
-        // succeeds if strategy is allowed
-        let msg = QueryMsg::CheckTransaction {
-            sender: "actor".to_string(),
-            msgs: vec![UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute{
-                msg: to_binary(&TestFieldsExecuteMsg {
-                    recipient: "picard".to_string(),
-                    strategy: "engage".to_string(),
-                }).unwrap(),
-                contract_addr: "targetcontract".to_string(),
-                funds: vec![],
-            }))],
-        };
-        let _res = query(deps.as_ref(), mock_env(), msg).unwrap();
-
-        // remove succeeds even with more fields specified (denying a more specific auth than exists)
-        let info = mock_info("owner", &coins(2, "token"));
-        let msg = ExecuteMsg::RemoveAuthorization {
-            authorization_to_remove: Authorization {
-                identifier: 0u16,
-                actor: Some(deps.api.addr_validate("actor").unwrap()),
-                contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
-                message_name: Some("test_fields_execute_msg".to_string()),
-                wasmaction_name: Some("MsgExecuteContract".to_string()),
-                fields: Some(
-                    [
-                        ("recipient".to_string(), "picard".to_string()),
-                        ("strategy".to_string(), "engage".to_string()),
-                    ]
-                    .to_vec(),
-                ),
-            },
-        };
-        let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // now removal fails as no longer exists
-        let info = mock_info("owner", &coins(2, "token"));
-        let msg = ExecuteMsg::RemoveAuthorization {
-            authorization_to_remove: Authorization {
-                identifier: 0u16,
-                actor: Some(deps.api.addr_validate("actor").unwrap()),
-                contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
-                message_name: Some("test_fields_execute_msg".to_string()),
-                wasmaction_name: Some("MsgExecuteContract".to_string()),
-                fields: Some(
-                    [
-                        ("strategy".to_string(), "engage".to_string()),
-                    ]
-                    .to_vec(),
-                ),
-            },        };
-        let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
-    }
-
-    #[test]
-    fn handling_repeat_authorization_fields() {
-        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
-
-        let msg = InstantiateMsg {
-            owner: "owner".to_string(),
-        };
-        let info = mock_info("creator", &coins(2, "token"));
-        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // add authorization with fields
-        let info = mock_info("owner", &coins(2, "token"));
-        let msg = ExecuteMsg::AddAuthorization {
-            new_authorization: Authorization {
-                identifier: 0u16,
-                actor: Some(deps.api.addr_validate("actor").unwrap()),
-                contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
-                message_name: Some("test_fields_execute_msg".to_string()),
-                wasmaction_name: Some("MsgExecuteContract".to_string()),
-                fields: Some(
-                    [
-                        ("recipient".to_string(), "picard".to_string()),
-                        ("strategy".to_string(), "engage".to_string()),
-                    ]
-                    .to_vec(),
-                ),
-            },
-        };
-        let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // adding the same again should cause an error
-        // in the future, maybe change this test to update expiration instead
-        let info = mock_info("owner", &coins(2, "token"));
-        let msg = ExecuteMsg::AddAuthorization {
-            new_authorization: Authorization {
-                identifier: 0u16,
-                actor: Some(deps.api.addr_validate("actor").unwrap()),
-                contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
-                message_name: Some("test_fields_execute_msg".to_string()),
-                wasmaction_name: Some("MsgExecuteContract".to_string()),
-                fields: Some(
-                    [
-                        ("recipient".to_string(), "picard".to_string()),
-                        ("strategy".to_string(), "engage".to_string()),
-                    ]
-                    .to_vec(),
-                ),
-            },
-        };
-        let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
     }
 }
