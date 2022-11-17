@@ -53,7 +53,7 @@ pub fn instantiate(
                 primitive_contract: None,
             },
         )
-        .map_err(|e| ContractError::CommonError(e))
+        .map_err(ContractError::CommonError)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -90,10 +90,10 @@ pub fn add_authorization(
     info: MessageInfo,
     authorization: Authorization,
 ) -> Result<Response, ContractError> {
-    if !ADOContract::default().is_owner_or_operator(deps.storage, info.sender.as_str())? {
-        if !is_owner(deps.storage, info.sender.to_string())? {
-            return Err(ContractError::Unauthorized {});
-        }
+    if !ADOContract::default().is_owner_or_operator(deps.storage, info.sender.as_str())?
+        && !is_owner(deps.storage, info.sender.to_string())?
+    {
+        return Err(ContractError::Unauthorized {});
     }
     match get_authorizations_with_idx(deps.as_ref(), authorization.clone(), None) {
         Err(_) => {
@@ -105,7 +105,7 @@ pub fn add_authorization(
             )?;
         }
         Ok(key) => {
-            if key.authorizations.len() == 0 {
+            if key.authorizations.is_empty() {
                 let auth_count = COUNTER.load(deps.as_ref().storage)?.to_owned();
                 authorizations().save(
                     deps.storage,
@@ -187,7 +187,7 @@ fn get_authorizations_with_idx(
                                         None => {
                                             // return all authorizations!
                                             return Ok(AuthorizationsResponse { authorizations: authorizations().range(deps.storage, None, None, Order::Ascending).collect::<StdResult<Vec<(Vec<u8>, Authorization)>>>()
-                                                .map_err(|e| ContractError::Std(e))?});
+                                                .map_err(ContractError::Std)?});
                                         }
                                         Some(_) => working_auths = authorizations()
                                             .range(deps.storage, None, None, Order::Ascending)
@@ -271,7 +271,7 @@ fn get_authorizations_with_idx(
         working_auths.retain(|item| item.1.fields != None);
 
         // if anything remains, iterate through
-        if working_auths.len() < 1 {
+        if working_auths.is_empty() {
             return Err(ContractError::NoSuchAuthorization {
                 loc: "get_authorizations_with_idx_2".to_string(),
             });
@@ -286,7 +286,7 @@ fn get_authorizations_with_idx(
         // in this case, Nones are a go ahead!
         let mut none_auths = working_auths.clone();
         none_auths.retain(|item| item.1.fields != None);
-        if none_auths.len() > 0 {
+        if !none_auths.is_empty() {
             // just return here as we have authorization(s) that don't require fields
             // note that this means the a caller is not guaranteed a complete list of
             // applicable authorizations: returning an authorization may have other utilities,
@@ -367,10 +367,10 @@ pub fn rm_authorization(
     info: MessageInfo,
     authorization: Authorization,
 ) -> Result<Response, ContractError> {
-    if !ADOContract::default().is_owner_or_operator(deps.storage, info.sender.as_str())? {
-        if !is_owner(deps.storage, info.sender.to_string())? {
-            return Err(ContractError::Unauthorized {});
-        }
+    if !ADOContract::default().is_owner_or_operator(deps.storage, info.sender.as_str())?
+        && !is_owner(deps.storage, info.sender.to_string())?
+    {
+        return Err(ContractError::Unauthorized {});
     }
     let found_auth_key = match get_authorizations_with_idx(deps.as_ref(), authorization, None) {
         Err(_) => {
@@ -399,10 +399,10 @@ pub fn rm_all_matching_authorizations(
     info: MessageInfo,
     authorization: Authorization,
 ) -> Result<Response, ContractError> {
-    if !ADOContract::default().is_owner_or_operator(deps.storage, info.sender.as_str())? {
-        if !is_owner(deps.storage, info.sender.to_string())? {
-            return Err(ContractError::Unauthorized {});
-        }
+    if !ADOContract::default().is_owner_or_operator(deps.storage, info.sender.as_str())?
+        && !is_owner(deps.storage, info.sender.to_string())?
+    {
+        return Err(ContractError::Unauthorized {});
     }
     let found_auth_key = match get_authorizations_with_idx(deps.as_ref(), authorization, None) {
         Err(e) => {
@@ -622,7 +622,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, common::erro
             &get_authorizations_with_idx(
                 deps,
                 Authorization {
-                    identifier: identifier.unwrap_or_else(|| 0u16),
+                    identifier: identifier.unwrap_or(0u16),
                     actor: actor.map(|inner| deps.api.addr_validate(&inner).unwrap()),
                     contract: target_contract.map(|ct| deps.api.addr_validate(&ct).unwrap()),
                     message_name,

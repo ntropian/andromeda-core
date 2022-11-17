@@ -8,22 +8,19 @@
 //! ```
 //! use serde_json::json;
 //!
-//! fn main() {
-//!     // The type of `john` is `serde_json::Value`
-//!     let john_json = json!({
-//!         "name": "John Doe",
-//!         "age": 43u32,
-//!         "phones": [
-//!             "+44 1234567",
-//!             "+44 2345678"
-//!         ]
-//!     }).to_string();
+//! // The type of `john` is `serde_json::Value`
+//! let john_json = json!({
+//!     "name": "John Doe",
+//!     "age": 43u32,
+//!     "phones": [
+//!         "+44 1234567",
+//!         "+44 2345678"
+//!     ]
+//! }).to_string();
 //!
-//!     let john: serde_json_wasm::Value = serde_json_wasm::from_str(&john_json).unwrap();
+//! let john: serde_json_wasm::Value = serde_json_wasm::from_str(&john_json).unwrap();
 //!
-//!     println!("first phone number: {:?}", john["phones"][0]);
-//! }
-//! ```
+//! println!("first phone number: {:?}", john["phones"][0]);
 //!
 //! The `Value::to_string()` function converts a `serde_json::Value` into a
 //! `String` of JSON text.
@@ -448,10 +445,7 @@ impl Value {
     /// assert!(!v["b"].is_number());
     /// ```
     pub fn is_number(&self) -> bool {
-        match *self {
-            Value::Number(_) => true,
-            _ => false,
-        }
+        matches!(*self, Value::Number(_))
     }
 
     /// Returns true if the `Value` is an integer between `i64::MIN` and
@@ -684,24 +678,22 @@ impl Value {
     /// ```
     /// use serde_json::Value;
     ///
-    /// fn main() {
-    ///     let s = r#"{"x": 1.0, "y": 2.0}"#;
-    ///     let mut value: Value = serde_json::from_str(s).unwrap();
+    /// let s = r#"{"x": 1.0, "y": 2.0}"#;
+    /// let mut value: Value = serde_json::from_str(s).unwrap();
     ///
-    ///     // Check value using read-only pointer
-    ///     assert_eq!(value.pointer("/x"), Some(&1.0.into()));
-    ///     // Change value with direct assignment
-    ///     *value.pointer_mut("/x").unwrap() = 1.5.into();
-    ///     // Check that new value was written
-    ///     assert_eq!(value.pointer("/x"), Some(&1.5.into()));
-    ///     // Or change the value only if it exists
-    ///     value.pointer_mut("/x").map(|v| *v = 1.5.into());
+    /// // Check value using read-only pointer
+    /// assert_eq!(value.pointer("/x"), Some(&1.0.into()));
+    /// // Change value with direct assignment
+    /// *value.pointer_mut("/x").unwrap() = 1.5.into();
+    /// // Check that new value was written
+    /// assert_eq!(value.pointer("/x"), Some(&1.5.into()));
+    /// // Or change the value only if it exists
+    /// value.pointer_mut("/x").map(|v| *v = 1.5.into());
     ///
-    ///     // "Steal" ownership of a value. Can replace with any valid Value.
-    ///     let old_x = value.pointer_mut("/x").map(Value::take).unwrap();
-    ///     assert_eq!(old_x, 1.5);
-    ///     assert_eq!(value.pointer("/x").unwrap(), &Value::Null);
-    /// }
+    /// // "Steal" ownership of a value. Can replace with any valid Value.
+    /// let old_x = value.pointer_mut("/x").map(Value::take).unwrap();
+    /// assert_eq!(old_x, 1.5);
+    /// assert_eq!(value.pointer("/x").unwrap(), &Value::Null);
     /// ```
     pub fn pointer_mut(&mut self, pointer: &str) -> Option<&mut Value> {
         if pointer.is_empty() {
@@ -791,18 +783,16 @@ mod partial_eq;
 ///     location: String,
 /// }
 ///
-/// fn main() {
-///     // The type of `j` is `serde_json::Value`
-///     let j = json!({
-///         "fingerprint": "0xF9BA143B95FF6D82",
-///         "location": "Menlo Park, CA"
-///     }).to_string();
+/// // The type of `j` is `serde_json::Value`
+/// let j = json!({
+///     "fingerprint": "0xF9BA143B95FF6D82",
+///     "location": "Menlo Park, CA"
+/// }).to_string();
 ///
-///     let j: serde_json_wasm::Value = serde_json_wasm::from_str(&j).unwrap();
+/// let j: serde_json_wasm::Value = serde_json_wasm::from_str(&j).unwrap();
 ///
-///     let u: User = serde_json_wasm::from_value(j).unwrap();
-///     println!("{:#?}", u);
-/// }
+/// let u: User = serde_json_wasm::from_value(j).unwrap();
+/// println!("{:#?}", u);
 /// ```
 ///
 /// # Errors

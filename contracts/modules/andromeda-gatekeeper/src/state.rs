@@ -39,7 +39,7 @@ pub fn authorizations<'a>() -> IndexedMap<'a, &'a [u8], Authorization, Authoriza
     IndexedMap::new(
         AUTHORIZATIONS_KEY,
         AuthorizationIndexes {
-            identifier: UniqueIndex::new(|d| d.identifier.clone(), AUTHORIZATIONS_UNIQUE_KEYS),
+            identifier: UniqueIndex::new(|d| d.identifier, AUTHORIZATIONS_UNIQUE_KEYS),
             actor: MultiIndex::new(
                 |d| (d.actor.clone().unwrap()),
                 AUTHORIZATIONS_KEY,
@@ -69,5 +69,5 @@ pub const OWNER: Item<Addr> = Item::new("local_owner");
 
 pub fn is_owner(storage: &dyn Storage, address: String) -> StdResult<bool> {
     let owner = OWNER.load(storage)?;
-    Ok(address == owner.to_string())
+    Ok(address == owner)
 }
