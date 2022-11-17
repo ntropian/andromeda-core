@@ -145,7 +145,7 @@ mod tests {
         };
         let res = query(deps.as_ref(), mock_env(), msg).unwrap();
         let auth_response: AuthorizationsResponse = from_binary(&res).unwrap();
-        assert!(auth_response.authorizations.len() > 0);
+        assert!(!auth_response.authorizations.is_empty());
 
         // unauthorized user cannot remove an authorization
         let info = mock_info("baduser", &coins(2, "token"));
@@ -244,7 +244,7 @@ mod tests {
         };
         let res = query(deps.as_ref(), mock_env(), msg).unwrap();
         let auth_response: AuthorizationsResponse = from_binary(&res).unwrap();
-        assert!(auth_response.authorizations.len() > 0);
+        assert!(!auth_response.authorizations.is_empty());
 
         // let's remove but with wrong fields specified... should FAIL
         let info = mock_info("owner", &coins(2, "token"));
@@ -342,7 +342,7 @@ mod tests {
         };
         let res = query(deps.as_ref(), mock_env(), msg).unwrap();
         let auth_response: AuthorizationsResponse = from_binary(&res).unwrap();
-        assert!(auth_response.authorizations.len() > 0);
+        assert!(!auth_response.authorizations.is_empty());
 
         // remove succeeds even with more fields specified (denying a more specific auth than exists)
         let info = mock_info("owner", &coins(2, "token"));
