@@ -26,8 +26,8 @@ pub enum ContractError {
     #[error("Not operator")]
     NotOperator {},
 
-    #[error("No authorization for target contract")]
-    NoSuchAuthorization,
+    #[error("No authorization for target contract, found in {loc:?}")]
+    NoSuchAuthorization { loc: String },
 
     #[error("Field mismatch: field {key:?} must contain parameter {value:?}")]
     FieldMismatch { key: String, value: String },

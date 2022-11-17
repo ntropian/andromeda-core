@@ -70,8 +70,8 @@ mod tests {
                 identifier: 0u16,
                 actor: Some(deps.api.addr_validate("actor").unwrap()),
                 contract: Some(deps.api.addr_validate("targetcontract").unwrap()),
-                message_name: Some("test_execute_msg".to_string()),
-                wasmaction_name: Some("MsgExecuteContract".to_string()),
+                message_name: Some("MsgExecuteContract".to_string()),
+                wasmaction_name: Some("test_execute_msg".to_string()),
                 fields: None,
             },
         };

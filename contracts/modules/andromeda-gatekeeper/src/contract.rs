@@ -155,13 +155,15 @@ fn get_authorizations_with_idx(
     msg: Option<Binary>,
 ) -> Result<AuthorizationsResponse, ContractError> {
     // if identifier specified, our task is easy
-    if authorization.identifier > 0 {
+    if authorization.identifier > 0u16 {
         let auth = authorizations()
             .idx
             .identifier
             .item(deps.storage, authorization.identifier)?;
         return match auth {
-            None => Err(ContractError::NoSuchAuthorization {}),
+            None => Err(ContractError::NoSuchAuthorization {
+                loc: "get_authorizations_with_idx_1".to_string(),
+            }),
             Some(res) => Ok(AuthorizationsResponse {
                 authorizations: vec![res],
             }),
@@ -270,7 +272,9 @@ fn get_authorizations_with_idx(
 
         // if anything remains, iterate through
         if working_auths.len() < 1 {
-            return Err(ContractError::NoSuchAuthorization {});
+            return Err(ContractError::NoSuchAuthorization {
+                loc: "get_authorizations_with_idx_2".to_string(),
+            });
         } else {
             check_authorizations_against_fields(&mut working_auths, &msg_obj)?;
         }
@@ -369,11 +373,17 @@ pub fn rm_authorization(
         }
     }
     let found_auth_key = match get_authorizations_with_idx(deps.as_ref(), authorization, None) {
-        Err(_) => return Err(ContractError::NoSuchAuthorization {}),
+        Err(_) => {
+            return Err(ContractError::NoSuchAuthorization {
+                loc: "rm_authorization_1".to_string(),
+            })
+        }
         Ok(key) => key,
     };
     match found_auth_key.authorizations.len() {
-        0 => Err(ContractError::NoSuchAuthorization {}),
+        0 => Err(ContractError::NoSuchAuthorization {
+            loc: "rm_authorization_2".to_string(),
+        }),
         1 => {
             authorizations().remove(deps.storage, &found_auth_key.authorizations[0].0)?;
             Ok(Response::default())
@@ -395,7 +405,9 @@ pub fn rm_all_matching_authorizations(
         }
     }
     let found_auth_key = match get_authorizations_with_idx(deps.as_ref(), authorization, None) {
-        Err(_) => return Err(ContractError::NoSuchAuthorization {}),
+        Err(e) => {
+            return Err(e);
+        }
         Ok(key) => key,
     };
     for key in found_auth_key.authorizations {
