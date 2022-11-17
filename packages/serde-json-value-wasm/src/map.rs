@@ -124,7 +124,7 @@ impl Map<String, Value> {
         String: Borrow<Q>,
         Q: ?Sized + Ord + Eq + Hash,
     {
-        return self.map.remove(key);
+        self.map.remove(key)
     }
 
     /// Removes a key from the map, returning the stored key and value if the
@@ -137,7 +137,7 @@ impl Map<String, Value> {
         String: Borrow<Q>,
         Q: ?Sized + Ord + Eq + Hash,
     {
-        return self.map.remove_entry(key);
+        self.map.remove_entry(key)
     }
 
     /// Moves all elements from other into self, leaving other empty.
@@ -727,7 +727,7 @@ impl<'a> OccupiedEntry<'a> {
     /// ```
     #[inline]
     pub fn remove(self) -> Value {
-        return self.occupied.remove();
+        self.occupied.remove()
     }
 }
 

@@ -422,77 +422,74 @@ pub fn check_msg(
     sender: Addr,
     msg: UniversalMsg,
 ) -> Result<AuthorizationsResponse, ContractError> {
+    let todo_auths = AuthorizationsResponse {
+        authorizations: vec![],
+    };
     match msg {
         UniversalMsg::Andromeda(msg) => match msg {
-            common::ado_base::AndromedaMsg::Receive(_) => todo!(),
-            common::ado_base::AndromedaMsg::UpdateOwner { address } => todo!(),
-            common::ado_base::AndromedaMsg::UpdateOperators { operators } => todo!(),
-            common::ado_base::AndromedaMsg::UpdateAppContract { address } => todo!(),
+            common::ado_base::AndromedaMsg::Receive(_) => Ok(todo_auths),
+            common::ado_base::AndromedaMsg::UpdateOwner { address } => Ok(todo_auths),
+            common::ado_base::AndromedaMsg::UpdateOperators { operators } => Ok(todo_auths),
+            common::ado_base::AndromedaMsg::UpdateAppContract { address } => Ok(todo_auths),
             common::ado_base::AndromedaMsg::Withdraw {
                 recipient,
                 tokens_to_withdraw,
-            } => todo!(),
-            common::ado_base::AndromedaMsg::RegisterModule { module } => todo!(),
-            common::ado_base::AndromedaMsg::DeregisterModule { module_idx } => todo!(),
-            common::ado_base::AndromedaMsg::AlterModule { module_idx, module } => todo!(),
-            common::ado_base::AndromedaMsg::RefreshAddress { contract } => todo!(),
-            common::ado_base::AndromedaMsg::RefreshAddresses { limit, start_after } => todo!(),
+            } => Ok(todo_auths),
+            common::ado_base::AndromedaMsg::RegisterModule { module } => Ok(todo_auths),
+            common::ado_base::AndromedaMsg::DeregisterModule { module_idx } => Ok(todo_auths),
+            common::ado_base::AndromedaMsg::AlterModule { module_idx, module } => Ok(todo_auths),
+            common::ado_base::AndromedaMsg::RefreshAddress { contract } => Ok(todo_auths),
+            common::ado_base::AndromedaMsg::RefreshAddresses { limit, start_after } => {
+                Ok(todo_auths)
+            }
         },
-        UniversalMsg::Legacy(msg) => {
-            match msg {
-                cosmwasm_std::CosmosMsg::Bank(_) => todo!(),
-                cosmwasm_std::CosmosMsg::Custom(_) => todo!(),
-                cosmwasm_std::CosmosMsg::Staking(_) => todo!(),
-                cosmwasm_std::CosmosMsg::Distribution(_) => todo!(),
-                cosmwasm_std::CosmosMsg::Stargate { type_url, value } => todo!(),
-                cosmwasm_std::CosmosMsg::Ibc(_) => todo!(),
-                cosmwasm_std::CosmosMsg::Wasm(msg) => {
-                    match msg {
-                        WasmMsg::Execute {
-                            contract_addr,
-                            msg,
-                            funds: _,
-                        } => {
-                            return check_wasm_msg(
-                                deps,
-                                Some(deps.api.addr_validate(&contract_addr)?),
-                                sender,
-                                msg,
-                                "MsgExecuteContract".to_string(),
-                            );
-                        }
-                        WasmMsg::Instantiate {
-                            admin: _,
-                            code_id: _,
-                            msg,
-                            funds: _,
-                            label: _,
-                        } => {
-                            return check_wasm_msg(
-                                deps,
-                                None,
-                                sender,
-                                msg,
-                                "MsgInstantiateContract".to_string(),
-                            );
-                        }
-                        WasmMsg::Migrate {
-                            contract_addr,
-                            new_code_id,
-                            msg,
-                        } => todo!(),
-                        WasmMsg::UpdateAdmin {
-                            contract_addr,
-                            admin,
-                        } => todo!(),
-                        WasmMsg::ClearAdmin { contract_addr } => todo!(),
-                        _ => todo!(),
-                    };
-                }
-                cosmwasm_std::CosmosMsg::Gov(_) => todo!(),
-                _ => todo!(),
-            };
-        }
+        UniversalMsg::Legacy(msg) => match msg {
+            cosmwasm_std::CosmosMsg::Bank(_) => Ok(todo_auths),
+            cosmwasm_std::CosmosMsg::Custom(_) => Ok(todo_auths),
+            cosmwasm_std::CosmosMsg::Staking(_) => Ok(todo_auths),
+            cosmwasm_std::CosmosMsg::Distribution(_) => Ok(todo_auths),
+            cosmwasm_std::CosmosMsg::Stargate { type_url, value } => Ok(todo_auths),
+            cosmwasm_std::CosmosMsg::Ibc(_) => Ok(todo_auths),
+            cosmwasm_std::CosmosMsg::Wasm(msg) => match msg {
+                WasmMsg::Execute {
+                    contract_addr,
+                    msg,
+                    funds: _,
+                } => check_wasm_msg(
+                    deps,
+                    Some(deps.api.addr_validate(&contract_addr)?),
+                    sender,
+                    msg,
+                    "MsgExecuteContract".to_string(),
+                ),
+                WasmMsg::Instantiate {
+                    admin: _,
+                    code_id: _,
+                    msg,
+                    funds: _,
+                    label: _,
+                } => check_wasm_msg(
+                    deps,
+                    None,
+                    sender,
+                    msg,
+                    "MsgInstantiateContract".to_string(),
+                ),
+                WasmMsg::Migrate {
+                    contract_addr,
+                    new_code_id,
+                    msg,
+                } => Ok(todo_auths),
+                WasmMsg::UpdateAdmin {
+                    contract_addr,
+                    admin,
+                } => Ok(todo_auths),
+                WasmMsg::ClearAdmin { contract_addr } => Ok(todo_auths),
+                _ => Ok(todo_auths),
+            },
+            cosmwasm_std::CosmosMsg::Gov(_) => Ok(todo_auths),
+            _ => Ok(todo_auths),
+        },
     }
 }
 
