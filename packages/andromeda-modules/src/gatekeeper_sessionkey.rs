@@ -1,4 +1,4 @@
-use std::fmt::{Debug};
+use std::fmt::Debug;
 
 use common::ado_base::{hooks::AndromedaHook, AndromedaMsg, AndromedaQuery};
 use cosmwasm_std::{Addr, Timestamp};

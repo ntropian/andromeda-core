@@ -1,15 +1,13 @@
 #[cfg(test)]
 mod tests {
-    
+
     use crate::contract::{execute, instantiate};
-    
+
     use ado_base::ADOContract;
     use andromeda_modules::gatekeeper_common::InstantiateMsg;
     use andromeda_modules::gatekeeper_delay::ExecuteMsg;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{
-        to_binary, CosmosMsg, DepsMut, MessageInfo, Timestamp, WasmMsg,
-    };
+    use cosmwasm_std::{to_binary, CosmosMsg, DepsMut, MessageInfo, Timestamp, WasmMsg};
 
     fn init(deps: DepsMut, info: MessageInfo) {
         instantiate(

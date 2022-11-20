@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    
+
     use crate::contract::{execute, instantiate, query};
     use ado_base::ADOContract;
     use andromeda_modules::gatekeeper_common::{

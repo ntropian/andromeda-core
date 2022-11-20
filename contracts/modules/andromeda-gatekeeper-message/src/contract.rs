@@ -334,14 +334,15 @@ pub fn check_authorizations_against_fields(
     working_auths: &mut Vec<(Vec<u8>, Authorization)>,
     msg_obj: &serde_json_value_wasm::Map<String, Value>,
 ) -> Result<(), ContractError> {
-    for mut auth_count in 0..working_auths.len() {
+    let mut offset = 0usize;
+    for auth_count in 0..working_auths.len() {
         // we're editing working_auths in place, not iterating,
         // so make sure we're not at the end...
-        if auth_count == working_auths.len() {
+        if auth_count - offset == working_auths.len() {
             break;
         }
-        let this_idx = working_auths[auth_count].0.clone();
-        let this_auth: Authorization = working_auths[auth_count].1.clone();
+        let this_idx = working_auths[auth_count - offset].0.clone();
+        let this_auth: Authorization = working_auths[auth_count - offset].1.clone();
         match this_auth.fields {
             Some(vals) => {
                 'inner: for kv in 0..vals.len() {
@@ -352,15 +353,14 @@ pub fn check_authorizations_against_fields(
                             // remove this auth from results, since its field mismatches
                             // still to be implemented: range and != matching logic
                             working_auths.retain(|item| item.0 != this_idx);
-                            auth_count = auth_count.saturating_sub(1);
+                            offset = offset + 1;
                             break 'inner;
                         }
                         // else, keep this auth
                     } else {
                         // remove this auth from results, since it doesn't include the required field
                         working_auths.retain(|item| item.0 != this_idx);
-                        // todo: better
-                        auth_count = auth_count.saturating_sub(1);
+                        offset = offset + 1;
                         break 'inner;
                     }
                 }

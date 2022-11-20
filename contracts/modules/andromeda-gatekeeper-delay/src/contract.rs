@@ -3,12 +3,9 @@ use std::convert::TryInto;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    attr, ensure, to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response,
-    StdError,
+    attr, ensure, to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, StdError,
 };
 use cw2::{get_contract_version, set_contract_version};
-
-
 
 use crate::state::{next_id, COUNTER, QUEUE};
 use ado_base::ADOContract;

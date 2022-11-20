@@ -1,14 +1,9 @@
-
-
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    ensure, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response,
-    StdError,
+    ensure, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError,
 };
 use cw2::{get_contract_version, set_contract_version};
-
-
 
 use ado_base::ADOContract;
 use andromeda_modules::gatekeeper_common::{
