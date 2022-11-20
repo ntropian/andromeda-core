@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use andromeda_modules::gatekeeper::{
+    use ado_base::ADOContract;
+    use andromeda_modules::gatekeeper_message::{
         Authorization, AuthorizationsResponse, ExecuteMsg, InstantiateMsg, QueryMsg,
         TestExecuteMsg, TestFieldsExecuteMsg, TestMsg, UniversalMsg,
     };
@@ -42,7 +43,11 @@ mod tests {
             owner: "owner".to_string(),
         };
         let info = mock_info("user", &coins(2, "token"));
-        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+        ADOContract::default()
+            .execute_update_operators(deps.as_mut(), info, vec!["owner".to_owned()])
+            .unwrap();
 
         // non-operator cannot add authorization
         let info = mock_info("anyone", &coins(2, "token"));
@@ -207,7 +212,11 @@ mod tests {
             owner: "owner".to_string(),
         };
         let info = mock_info("creator", &coins(2, "token"));
-        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+        ADOContract::default()
+        .execute_update_operators(deps.as_mut(), info, vec!["owner".to_owned()])
+        .unwrap();
 
         // add authorization with fields
         let info = mock_info("owner", &coins(2, "token"));
@@ -387,7 +396,11 @@ mod tests {
             owner: "owner".to_string(),
         };
         let info = mock_info("creator", &coins(2, "token"));
-        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+        ADOContract::default()
+        .execute_update_operators(deps.as_mut(), info, vec!["owner".to_owned()])
+        .unwrap();
 
         // add authorization with fields
         let info = mock_info("owner", &coins(2, "token"));

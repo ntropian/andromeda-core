@@ -1,4 +1,4 @@
-use andromeda_modules::gatekeeper::Authorization;
+use andromeda_modules::gatekeeper_message::Authorization;
 use cosmwasm_std::StdError;
 use std::str::Utf8Error;
 

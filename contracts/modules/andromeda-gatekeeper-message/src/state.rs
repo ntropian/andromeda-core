@@ -2,7 +2,7 @@ use cosmwasm_std::{Addr, StdResult, Storage, Uint128};
 use cw_storage_plus::{Index, IndexList, IndexedMap, MultiIndex};
 use cw_storage_plus::{Item, UniqueIndex};
 
-use andromeda_modules::gatekeeper::Authorization;
+use andromeda_modules::gatekeeper_message::Authorization;
 
 pub struct AuthorizationIndexes<'a> {
     // pk goes to second tuple element
@@ -65,9 +65,3 @@ pub fn authorizations<'a>() -> IndexedMap<'a, &'a [u8], Authorization, Authoriza
 }
 
 pub const COUNTER: Item<Uint128> = Item::new(AUTH_COUNT_KEY);
-pub const OWNER: Item<Addr> = Item::new("local_owner");
-
-pub fn is_owner(storage: &dyn Storage, address: String) -> StdResult<bool> {
-    let owner = OWNER.load(storage)?;
-    Ok(address == owner)
-}

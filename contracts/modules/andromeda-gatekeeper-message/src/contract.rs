@@ -1,4 +1,4 @@
-use andromeda_modules::gatekeeper::{
+use andromeda_modules::gatekeeper_message::{
     Authorization, AuthorizationsResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
     UniversalMsg,
 };
@@ -12,7 +12,7 @@ use cosmwasm_std::{Empty, WasmMsg};
 use cw2::{get_contract_version, set_contract_version};
 
 
-use crate::state::{is_owner, COUNTER, OWNER};
+use crate::state::COUNTER;
 use crate::{error::ContractError, state::authorizations};
 use ado_base::ADOContract;
 use common::{
@@ -39,7 +39,6 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     COUNTER.save(deps.storage, &Uint128::from(0u128))?;
-    OWNER.save(deps.storage, &deps.api.addr_validate(&msg.owner)?)?;
     ADOContract::default()
         .instantiate(
             deps.storage,
@@ -92,7 +91,6 @@ pub fn add_authorization(
     authorization: Authorization,
 ) -> Result<Response, ContractError> {
     if !ADOContract::default().is_owner_or_operator(deps.storage, info.sender.as_str())?
-        && !is_owner(deps.storage, info.sender.to_string())?
     {
         return Err(ContractError::Unauthorized {});
     }
@@ -190,6 +188,7 @@ fn get_authorizations_with_idx(
                                             return Ok(AuthorizationsResponse { authorizations: authorizations().range(deps.storage, None, None, Order::Ascending).collect::<StdResult<Vec<(Vec<u8>, Authorization)>>>()
                                                 .map_err(ContractError::Std)?});
                                         }
+                                    // some fields, but we can't use .idx for those (field checking is later)
                                         Some(_) => working_auths = authorizations()
                                             .range(deps.storage, None, None, Order::Ascending)
                                             .collect::<StdResult<Vec<(Vec<u8>, Authorization)>>>(
@@ -376,7 +375,6 @@ pub fn rm_authorization(
     authorization: Authorization,
 ) -> Result<Response, ContractError> {
     if !ADOContract::default().is_owner_or_operator(deps.storage, info.sender.as_str())?
-        && !is_owner(deps.storage, info.sender.to_string())?
     {
         return Err(ContractError::Unauthorized {});
     }
@@ -408,7 +406,6 @@ pub fn rm_all_matching_authorizations(
     authorization: Authorization,
 ) -> Result<Response, ContractError> {
     if !ADOContract::default().is_owner_or_operator(deps.storage, info.sender.as_str())?
-        && !is_owner(deps.storage, info.sender.to_string())?
     {
         return Err(ContractError::Unauthorized {});
     }
