@@ -1,7 +1,7 @@
-use std::fmt::{Debug, Display};
+use std::fmt::{Debug};
 
 use common::ado_base::{hooks::AndromedaHook, AndromedaMsg, AndromedaQuery};
-use cosmwasm_std::{Addr, Binary, Coin, CosmosMsg, StdResult, Timestamp};
+use cosmwasm_std::{CosmosMsg, StdResult, Timestamp};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

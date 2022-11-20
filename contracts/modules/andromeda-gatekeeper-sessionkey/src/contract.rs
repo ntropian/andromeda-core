@@ -1,14 +1,14 @@
-use std::convert::TryInto;
+
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    attr, ensure, to_binary, Binary, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo, Response,
-    StdError, StdResult,
+    ensure, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response,
+    StdError,
 };
 use cw2::{get_contract_version, set_contract_version};
-use cw_storage_plus::Bound;
-use schemars::_serde_json::de;
+
+
 
 use ado_base::ADOContract;
 use andromeda_modules::gatekeeper_common::{
@@ -22,9 +22,8 @@ use common::{
     ado_base::{hooks::AndromedaHook, AndromedaQuery, InstantiateMsg as BaseInstantiateMsg},
     encode_binary,
     error::ContractError,
-    parse_message,
 };
-use cw_utils::nonpayable;
+
 use semver::Version;
 
 // version info for migration info
@@ -102,7 +101,7 @@ fn create_session_key(
     };
     SESSIONKEYS
         .update(deps.storage, &valid_address, |_| Ok(new_session_key))
-        .map_err(|e| ContractError::Std(e))?;
+        .map_err(ContractError::Std)?;
     Ok(Response::new()
         .add_attribute("action", "create_session_key")
         .add_attribute("address", address))
@@ -110,7 +109,7 @@ fn create_session_key(
 
 fn destroy_session_key(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     address: String,
 ) -> Result<Response, ContractError> {
@@ -180,7 +179,7 @@ fn can_execute(
     deps: Deps,
     env: Env,
     sender: String,
-    msg: UniversalMsg,
+    _msg: UniversalMsg,
 ) -> Result<Binary, ContractError> {
     let valid_sender = deps.api.addr_validate(&sender)?;
     let session_key = SESSIONKEYS.load(deps.storage, &valid_sender)?;
@@ -195,9 +194,9 @@ fn can_execute(
     })?)
 }
 
-fn handle_andr_hook(deps: Deps, msg: AndromedaHook) -> Result<Binary, ContractError> {
+fn handle_andr_hook(_deps: Deps, msg: AndromedaHook) -> Result<Binary, ContractError> {
     match msg {
-        AndromedaHook::OnExecute { sender, .. } => {
+        AndromedaHook::OnExecute { sender: _, .. } => {
             /* let is_included = includes_address(deps.storage, &sender)?;
             let is_inclusive = IS_INCLUSIVE.load(deps.storage)?;
             if is_included != is_inclusive {
@@ -216,7 +215,7 @@ fn handle_andromeda_query(
     msg: AndromedaQuery,
 ) -> Result<Binary, ContractError> {
     match msg {
-        AndromedaQuery::Get(data) => {
+        AndromedaQuery::Get(_data) => {
             /*let address: String = parse_message(&data)?;
             encode_binary(&query_address(deps, &address)?)*/
             encode_binary(&cosmwasm_std::Empty {})

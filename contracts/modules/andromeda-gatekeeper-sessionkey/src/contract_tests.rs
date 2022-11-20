@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
+    
     use crate::contract::{execute, instantiate, query};
     use ado_base::ADOContract;
     use andromeda_modules::gatekeeper_common::{
@@ -9,7 +9,7 @@ mod tests {
     use andromeda_modules::gatekeeper_sessionkey::{CanExecuteResponse, ExecuteMsg, QueryMsg};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{
-        attr, from_binary, to_binary, CosmosMsg, DepsMut, MessageInfo, Response, Timestamp, WasmMsg,
+        from_binary, to_binary, CosmosMsg, DepsMut, MessageInfo, Timestamp, WasmMsg,
     };
 
     fn init(deps: DepsMut, info: MessageInfo) {
@@ -92,9 +92,9 @@ mod tests {
         let msg = ExecuteMsg::DestroySessionKey {
             address: "firstsession".to_string(),
         };
-        let _res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+        let _res = execute(deps.as_mut(), env, info, msg).unwrap();
 
         // won't return false but will error as the sessionkey doesn't exist anymore
-        let _res = query(deps.as_ref(), future_env.clone(), query_msg.clone()).unwrap_err();
+        let _res = query(deps.as_ref(), future_env, query_msg).unwrap_err();
     }
 }

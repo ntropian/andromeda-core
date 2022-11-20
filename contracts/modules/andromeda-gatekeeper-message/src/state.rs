@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, StdResult, Storage, Uint128};
+use cosmwasm_std::{Addr, Uint128};
 use cw_storage_plus::{Index, IndexList, IndexedMap, MultiIndex};
 use cw_storage_plus::{Item, UniqueIndex};
 

@@ -1,5 +1,5 @@
 use common::ado_base::{hooks::AndromedaHook, AndromedaMsg, AndromedaQuery};
-use cosmwasm_std::{Addr, Binary, Coin, CosmosMsg};
+use cosmwasm_std::{Addr, Binary, Coin};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

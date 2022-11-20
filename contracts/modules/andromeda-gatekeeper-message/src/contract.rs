@@ -359,6 +359,7 @@ pub fn check_authorizations_against_fields(
                     } else {
                         // remove this auth from results, since it doesn't include the required field
                         working_auths.retain(|item| item.0 != this_idx);
+                        // todo: better
                         auth_count = auth_count.saturating_sub(1);
                         break 'inner;
                     }

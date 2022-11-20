@@ -1,14 +1,14 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
+    
     use crate::contract::{execute, instantiate};
-    use crate::state::QUEUE;
+    
     use ado_base::ADOContract;
     use andromeda_modules::gatekeeper_common::InstantiateMsg;
     use andromeda_modules::gatekeeper_delay::ExecuteMsg;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{
-        attr, from_binary, to_binary, CosmosMsg, DepsMut, MessageInfo, Response, Timestamp, WasmMsg,
+        to_binary, CosmosMsg, DepsMut, MessageInfo, Timestamp, WasmMsg,
     };
 
     fn init(deps: DepsMut, info: MessageInfo) {
@@ -43,7 +43,7 @@ mod tests {
         let operator = "creator";
         let info = mock_info(operator, &[]);
 
-        let address = "whitelistee";
+        let _address = "whitelistee";
 
         init(deps.as_mut(), info.clone());
 
@@ -88,6 +88,6 @@ mod tests {
 
         // and now no longer exists
         future_env.block.time = Timestamp::from_seconds(env.block.time.seconds() + 16u64);
-        let _res = execute(deps.as_mut(), future_env.clone(), info, msg.clone()).unwrap_err();
+        let _res = execute(deps.as_mut(), future_env, info, msg).unwrap_err();
     }
 }
