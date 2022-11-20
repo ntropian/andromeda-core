@@ -1,34 +1,27 @@
-use std::fmt::{Display, Debug};
+use std::fmt::{Debug, Display};
 
 use common::ado_base::{hooks::AndromedaHook, AndromedaMsg, AndromedaQuery};
-use cosmwasm_std::{Addr, Binary, Coin, CosmosMsg, Timestamp, StdResult};
+use cosmwasm_std::{Addr, Binary, Coin, CosmosMsg, StdResult, Timestamp};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct InstantiateMsg {
-    pub owner: String,
-}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     AndrReceive(AndromedaMsg),
-    BeginTransaction { message: CosmosMsg, delay_seconds: u64 },
-    CancelTransaction { txnumber: u64 },
-    CompleteTransaction { txnumber: u64},
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub enum UniversalMsg {
-    Andromeda(AndromedaMsg),
-    Legacy(CosmosMsg),
-}
-
-impl std::fmt::Display for UniversalMsg {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
+    BeginTransaction {
+        message: CosmosMsg,
+        delay_seconds: u64,
+    },
+    CancelTransaction {
+        txnumber: u64,
+    },
+    CompleteTransaction {
+        txnumber: u64,
+    },
+    UpdateLegacyOwner {
+        new_owner: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -65,7 +58,7 @@ impl DelayedMsg {
     }
 
     pub fn get_message(&self) -> CosmosMsg {
-      self.message.clone()
+        self.message.clone()
     }
 }
 
@@ -78,5 +71,5 @@ pub struct TransactionResponse {
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct AllTransactionsResponse {
-    pub transactions_with_ids: Vec<(u64, DelayedMsg)>
+    pub transactions_with_ids: Vec<(u64, DelayedMsg)>,
 }

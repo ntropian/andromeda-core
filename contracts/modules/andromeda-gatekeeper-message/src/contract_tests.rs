@@ -1,9 +1,11 @@
 #[cfg(test)]
 mod tests {
     use ado_base::ADOContract;
+    use andromeda_modules::gatekeeper_common::{
+        InstantiateMsg, TestExecuteMsg, TestFieldsExecuteMsg, TestMsg, UniversalMsg,
+    };
     use andromeda_modules::gatekeeper_message::{
-        Authorization, AuthorizationsResponse, ExecuteMsg, InstantiateMsg, QueryMsg,
-        TestExecuteMsg, TestFieldsExecuteMsg, TestMsg, UniversalMsg,
+        Authorization, AuthorizationsResponse, ExecuteMsg, QueryMsg,
     };
     use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
     use cosmwasm_std::{coins, from_binary, to_binary, Api, CosmosMsg, WasmMsg};
@@ -15,7 +17,7 @@ mod tests {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
         let msg = InstantiateMsg {
-            owner: "owner".to_string(),
+            legacy_owner: Some("owner".to_string()),
         };
         let info = mock_info("creator", &coins(1000, "earth"));
 
@@ -40,7 +42,7 @@ mod tests {
         };
 
         let msg = InstantiateMsg {
-            owner: "owner".to_string(),
+            legacy_owner: Some("owner".to_string()),
         };
         let info = mock_info("user", &coins(2, "token"));
         let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
@@ -209,14 +211,14 @@ mod tests {
         };
 
         let msg = InstantiateMsg {
-            owner: "owner".to_string(),
+            legacy_owner: Some("owner".to_string()),
         };
         let info = mock_info("creator", &coins(2, "token"));
         let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
         ADOContract::default()
-        .execute_update_operators(deps.as_mut(), info, vec!["owner".to_owned()])
-        .unwrap();
+            .execute_update_operators(deps.as_mut(), info, vec!["owner".to_owned()])
+            .unwrap();
 
         // add authorization with fields
         let info = mock_info("owner", &coins(2, "token"));
@@ -393,14 +395,14 @@ mod tests {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
         let msg = InstantiateMsg {
-            owner: "owner".to_string(),
+            legacy_owner: Some("owner".to_string()),
         };
         let info = mock_info("creator", &coins(2, "token"));
         let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
         ADOContract::default()
-        .execute_update_operators(deps.as_mut(), info, vec!["owner".to_owned()])
-        .unwrap();
+            .execute_update_operators(deps.as_mut(), info, vec!["owner".to_owned()])
+            .unwrap();
 
         // add authorization with fields
         let info = mock_info("owner", &coins(2, "token"));

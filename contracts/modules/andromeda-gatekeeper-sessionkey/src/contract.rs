@@ -10,14 +10,14 @@ use cw2::{get_contract_version, set_contract_version};
 use cw_storage_plus::Bound;
 use schemars::_serde_json::de;
 
-use crate::state::{next_id, COUNTER, QUEUE};
 use ado_base::ADOContract;
 use andromeda_modules::gatekeeper_common::{
-    is_legacy_owner, update_legacy_owner, InstantiateMsg, LEGACY_OWNER,
+    is_legacy_owner, update_legacy_owner, InstantiateMsg, UniversalMsg, LEGACY_OWNER,
 };
-use andromeda_modules::gatekeeper_delay::{
-    AllTransactionsResponse, DelayedMsg, ExecuteMsg, MigrateMsg, QueryMsg, TransactionResponse,
+use andromeda_modules::gatekeeper_sessionkey::{
+    CanExecuteResponse, ExecuteMsg, MigrateMsg, QueryMsg, SessionKey, SESSIONKEYS,
 };
+
 use common::{
     ado_base::{hooks::AndromedaHook, AndromedaQuery, InstantiateMsg as BaseInstantiateMsg},
     encode_binary,
@@ -40,7 +40,6 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     LEGACY_OWNER.save(deps.storage, &msg.legacy_owner)?;
-    COUNTER.save(deps.storage, &0u64)?;
     ADOContract::default().instantiate(
         deps.storage,
         env,
@@ -67,14 +66,13 @@ pub fn execute(
         ExecuteMsg::AndrReceive(msg) => {
             ADOContract::default().execute(deps, env, info, msg, execute)
         }
-        ExecuteMsg::BeginTransaction {
-            message,
-            delay_seconds,
-        } => begin_transaction(deps, info, env, message, delay_seconds),
-        ExecuteMsg::CancelTransaction { txnumber } => cancel_transaction(deps, info, txnumber),
-        ExecuteMsg::CompleteTransaction { txnumber } => {
-            complete_transaction(deps, info, env, txnumber)
-        }
+        ExecuteMsg::CreateSessionKey {
+            address,
+            max_duration,
+            admin_permissions,
+        } => create_session_key(deps, env, info, address, max_duration, admin_permissions),
+        // note that session key can always destroy itself, even without admin/gatekeeper permission
+        ExecuteMsg::DestroySessionKey { address } => destroy_session_key(deps, env, info, address),
         ExecuteMsg::UpdateLegacyOwner { new_owner } => {
             let valid_new_owner = deps.api.addr_validate(&new_owner)?;
             update_legacy_owner(deps, info, valid_new_owner)
@@ -82,79 +80,53 @@ pub fn execute(
     }
 }
 
-/// Creates a `DelayedMsg` which will only be executable by `complete_transaction`
-/// once the delay has passed. Until then, it can be cancelled.
-fn begin_transaction(
-    mut deps: DepsMut,
-    info: MessageInfo,
+fn create_session_key(
+    deps: DepsMut,
     env: Env,
-    message: CosmosMsg,
-    delay: u64,
+    info: MessageInfo,
+    address: String,
+    max_duration: u64,
+    admin_permissions: bool,
 ) -> Result<Response, ContractError> {
-    // nonpayable(&info)?;
+    let valid_address = deps.api.addr_validate(&address)?;
     ensure!(
         ADOContract::default().is_owner_or_operator(deps.as_ref().storage, info.sender.as_str())?
             || is_legacy_owner(deps.as_ref(), info.sender)?,
         ContractError::Unauthorized {}
     );
-    let txnumber = next_id(deps.branch())?;
-    QUEUE.save(
-        deps.storage,
-        &txnumber.to_ne_bytes(),
-        &DelayedMsg::new(env.block.time.seconds() + delay, message.clone()),
-    )?;
-
-    Ok(Response::new().add_attributes(vec![
-        attr("action", "begin_transaction"),
-        attr("transaction", format!("{:?}", message)),
-        attr("pending_txnumber", format!("{}", txnumber)),
-    ]))
-}
-
-/// Deletes a `DelayedMsg` which has been begun but not completed.
-fn cancel_transaction(
-    deps: DepsMut,
-    info: MessageInfo,
-    txnumber: u64,
-) -> Result<Response, ContractError> {
-    // nonpayable(&info)?;
-    ensure!(
-        ADOContract::default().is_owner_or_operator(deps.as_ref().storage, info.sender.as_str())?
-            || is_legacy_owner(deps.as_ref(), info.sender)?,
-        ContractError::Unauthorized {}
-    );
-    QUEUE.remove(deps.storage, &txnumber.to_ne_bytes());
-
-    Ok(Response::new().add_attributes(vec![
-        attr("action", "remove_transaction"),
-        attr("removed_txnumber", txnumber.to_string()),
-    ]))
-}
-
-/// Completes a `DelayedMsg` if its delay has expired. Note that currently this
-/// can be done by any party; it does not require owner authorization, as they
-/// have already authorized that the transaction begin.
-fn complete_transaction(
-    deps: DepsMut,
-    _info: MessageInfo,
-    env: Env,
-    txnumber: u64,
-) -> Result<Response, ContractError> {
-    // nonpayable(&info)?;
-    let msg_to_add: DelayedMsg = QUEUE.load(deps.storage, &txnumber.to_ne_bytes())?;
-    ensure!(
-        msg_to_add.check_expiration(env.block.time)?,
-        ContractError::Std(StdError::GenericErr {
-            msg: format!("Delay still in progress for tx number {}", txnumber)
-        })
-    );
-    QUEUE.remove(deps.storage, &txnumber.to_ne_bytes());
+    // if exists, can be updated ... but session key should probably not be able to refresh itself
+    let new_session_key = SessionKey {
+        address: deps.api.addr_validate(&address)?,
+        expiration: env.block.time.seconds().saturating_add(max_duration),
+        admin_permissions,
+    };
+    SESSIONKEYS
+        .update(deps.storage, &valid_address, |_| Ok(new_session_key))
+        .map_err(|e| ContractError::Std(e))?;
     Ok(Response::new()
-        .add_attributes(vec![
-            attr("action", "complete_transaction"),
-            attr("completed_txnumber", format!("{}", txnumber)),
-        ])
-        .add_message(msg_to_add.get_message()))
+        .add_attribute("action", "create_session_key")
+        .add_attribute("address", address))
+}
+
+fn destroy_session_key(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    address: String,
+) -> Result<Response, ContractError> {
+    let valid_address = deps.api.addr_validate(&address)?;
+    let session_key = SESSIONKEYS.load(deps.storage, &valid_address)?;
+    ensure!(
+        session_key.address == info.sender
+            || ADOContract::default()
+                .is_owner_or_operator(deps.as_ref().storage, info.sender.as_str())?
+            || is_legacy_owner(deps.as_ref(), info.sender)?,
+        ContractError::Unauthorized {}
+    );
+    SESSIONKEYS.remove(deps.storage, &valid_address);
+    Ok(Response::new()
+        .add_attribute("action", "destroy_session_key")
+        .add_attribute("address", address))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -200,13 +172,27 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
     match msg {
         QueryMsg::AndrHook(msg) => handle_andr_hook(deps, msg),
         QueryMsg::AndrQuery(msg) => handle_andromeda_query(deps, env, msg),
-        QueryMsg::TransactionInProgress { txnumber } => {
-            Ok(to_binary(&query_transaction_in_progress(deps, txnumber)?)?)
-        }
-        QueryMsg::AllTransactionsInProgress {} => {
-            Ok(to_binary(&query_all_transactions_in_progress(deps)?)?)
-        }
+        QueryMsg::CanExecute { sender, message } => can_execute(deps, env, sender, message),
     }
+}
+
+fn can_execute(
+    deps: Deps,
+    env: Env,
+    sender: String,
+    msg: UniversalMsg,
+) -> Result<Binary, ContractError> {
+    let valid_sender = deps.api.addr_validate(&sender)?;
+    let session_key = SESSIONKEYS.load(deps.storage, &valid_sender)?;
+    ensure!(
+        !session_key.is_expired(env.block.time),
+        ContractError::Std(StdError::GenericErr {
+            msg: "Session key is expired".to_string(),
+        })
+    );
+    Ok(to_binary(&CanExecuteResponse {
+        can_execute: session_key.admin_permissions,
+    })?)
 }
 
 fn handle_andr_hook(deps: Deps, msg: AndromedaHook) -> Result<Binary, ContractError> {
@@ -237,31 +223,4 @@ fn handle_andromeda_query(
         }
         _ => ADOContract::default().query(deps, env, msg, query),
     }
-}
-
-fn query_transaction_in_progress(
-    deps: Deps,
-    txnumber: u64,
-) -> Result<TransactionResponse, ContractError> {
-    Ok(TransactionResponse {
-        delayed_transaction: QUEUE.load(deps.storage, &txnumber.to_ne_bytes())?,
-    })
-}
-
-// no pagination yet
-fn query_all_transactions_in_progress(
-    deps: Deps,
-) -> Result<AllTransactionsResponse, ContractError> {
-    let txs = QUEUE
-        .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
-        .into_iter()
-        .map(|i| {
-            // bad unwraps here, fix is todo
-            let j = i.unwrap();
-            (u64::from_ne_bytes(j.0.try_into().unwrap()), j.1)
-        })
-        .collect::<Vec<(u64, DelayedMsg)>>();
-    Ok(AllTransactionsResponse {
-        transactions_with_ids: txs,
-    })
 }

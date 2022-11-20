@@ -3,6 +3,8 @@ use cosmwasm_std::{Addr, Binary, Coin, CosmosMsg};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::gatekeeper_common::UniversalMsg;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Authorization {
     pub identifier: u16,
@@ -11,11 +13,6 @@ pub struct Authorization {
     pub message_name: Option<String>,
     pub wasmaction_name: Option<String>,
     pub fields: Option<Vec<(String, String)>>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct InstantiateMsg {
-    pub owner: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -31,6 +28,9 @@ pub enum ExecuteMsg {
     RmAllMatchingAuthorizations {
         authorization_to_remove: Authorization,
     },
+    UpdateLegacyOwner {
+        new_owner: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -39,12 +39,6 @@ pub struct WasmExecuteMsg {
     /// msg is the json-encoded ExecuteMsg struct (as raw Binary)
     pub msg: Binary,
     funds: Vec<Coin>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub enum UniversalMsg {
-    Andromeda(AndromedaMsg),
-    Legacy(CosmosMsg),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -78,23 +72,4 @@ pub enum MigrateMsg {}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct AuthorizationsResponse {
     pub authorizations: Vec<(Vec<u8>, Authorization)>,
-}
-
-// For unit tests
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum TestMsg {
-    KesselRun(TestExecuteMsg),
-    KobayashiMaru(TestFieldsExecuteMsg),
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct TestExecuteMsg {
-    pub parsecs: String,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct TestFieldsExecuteMsg {
-    pub recipient: String,
-    pub strategy: String,
 }

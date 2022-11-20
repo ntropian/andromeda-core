@@ -286,7 +286,47 @@ dependencies = [
 ]
 
 [[package]]
-name = "andromeda-gatekeeper"
+name = "andromeda-gatekeeper-delay"
+version = "0.1.0"
+dependencies = [
+ "ado-base",
+ "andromeda-modules",
+ "common",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus",
+ "cw-utils",
+ "cw2",
+ "schemars",
+ "semver",
+ "serde",
+ "serde-json-value-wasm",
+ "serde-json-wasm",
+ "thiserror",
+]
+
+[[package]]
+name = "andromeda-gatekeeper-message"
+version = "0.1.0"
+dependencies = [
+ "ado-base",
+ "andromeda-modules",
+ "common",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus",
+ "cw-utils",
+ "cw2",
+ "schemars",
+ "semver",
+ "serde",
+ "serde-json-value-wasm",
+ "serde-json-wasm",
+ "thiserror",
+]
+
+[[package]]
+name = "andromeda-gatekeeper-sessionkey"
 version = "0.1.0"
 dependencies = [
  "ado-base",
@@ -393,6 +433,7 @@ dependencies = [
  "andromeda-testing",
  "common",
  "cosmwasm-std",
+ "cw-storage-plus",
  "schemars",
  "serde",
 ]

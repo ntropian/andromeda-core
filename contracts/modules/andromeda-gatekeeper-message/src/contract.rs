@@ -1,6 +1,8 @@
+use andromeda_modules::gatekeeper_common::{
+    is_legacy_owner, update_legacy_owner, InstantiateMsg, UniversalMsg, LEGACY_OWNER,
+};
 use andromeda_modules::gatekeeper_message::{
-    Authorization, AuthorizationsResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
-    UniversalMsg,
+    Authorization, AuthorizationsResponse, ExecuteMsg, MigrateMsg, QueryMsg,
 };
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -10,7 +12,6 @@ use cosmwasm_std::{
 };
 use cosmwasm_std::{Empty, WasmMsg};
 use cw2::{get_contract_version, set_contract_version};
-
 
 use crate::state::COUNTER;
 use crate::{error::ContractError, state::authorizations};
@@ -38,6 +39,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    LEGACY_OWNER.save(deps.storage, &msg.legacy_owner)?;
     COUNTER.save(deps.storage, &Uint128::from(0u128))?;
     ADOContract::default()
         .instantiate(
@@ -82,6 +84,10 @@ pub fn execute(
         ExecuteMsg::AndrReceive(msg) => {
             ADOContract::default().execute(deps, env, info, msg, execute)
         }
+        ExecuteMsg::UpdateLegacyOwner { new_owner } => {
+            let valid_new_owner = deps.api.addr_validate(&new_owner)?;
+            update_legacy_owner(deps, info, valid_new_owner)
+        }
     }
 }
 
@@ -90,10 +96,11 @@ pub fn add_authorization(
     info: MessageInfo,
     authorization: Authorization,
 ) -> Result<Response, ContractError> {
-    if !ADOContract::default().is_owner_or_operator(deps.storage, info.sender.as_str())?
-    {
-        return Err(ContractError::Unauthorized {});
-    }
+    ensure!(
+        ADOContract::default().is_owner_or_operator(deps.as_ref().storage, info.sender.as_str())?
+            || is_legacy_owner(deps.as_ref(), info.sender)?,
+        ContractError::Unauthorized {}
+    );
     match get_authorizations_with_idx(deps.as_ref(), authorization.clone(), None) {
         Err(_) => {
             let auth_count = COUNTER.load(deps.as_ref().storage)?.to_owned();
@@ -188,7 +195,7 @@ fn get_authorizations_with_idx(
                                             return Ok(AuthorizationsResponse { authorizations: authorizations().range(deps.storage, None, None, Order::Ascending).collect::<StdResult<Vec<(Vec<u8>, Authorization)>>>()
                                                 .map_err(ContractError::Std)?});
                                         }
-                                    // some fields, but we can't use .idx for those (field checking is later)
+                                        // some fields, but we can't use .idx for those (field checking is later)
                                         Some(_) => working_auths = authorizations()
                                             .range(deps.storage, None, None, Order::Ascending)
                                             .collect::<StdResult<Vec<(Vec<u8>, Authorization)>>>(
@@ -374,10 +381,11 @@ pub fn rm_authorization(
     info: MessageInfo,
     authorization: Authorization,
 ) -> Result<Response, ContractError> {
-    if !ADOContract::default().is_owner_or_operator(deps.storage, info.sender.as_str())?
-    {
-        return Err(ContractError::Unauthorized {});
-    }
+    ensure!(
+        ADOContract::default().is_owner_or_operator(deps.as_ref().storage, info.sender.as_str())?
+            || is_legacy_owner(deps.as_ref(), info.sender)?,
+        ContractError::Unauthorized {}
+    );
     let found_auth_key = match get_authorizations_with_idx(deps.as_ref(), authorization, None) {
         Err(_) => {
             return Err(ContractError::NoSuchAuthorization {
@@ -405,10 +413,11 @@ pub fn rm_all_matching_authorizations(
     info: MessageInfo,
     authorization: Authorization,
 ) -> Result<Response, ContractError> {
-    if !ADOContract::default().is_owner_or_operator(deps.storage, info.sender.as_str())?
-    {
-        return Err(ContractError::Unauthorized {});
-    }
+    ensure!(
+        ADOContract::default().is_owner_or_operator(deps.as_ref().storage, info.sender.as_str())?
+            || is_legacy_owner(deps.as_ref(), info.sender)?,
+        ContractError::Unauthorized {}
+    );
     let found_auth_key = match get_authorizations_with_idx(deps.as_ref(), authorization, None) {
         Err(e) => {
             return Err(e);
