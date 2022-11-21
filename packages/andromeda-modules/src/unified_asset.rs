@@ -1,6 +1,6 @@
+use cosmwasm_std::Coin;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use cosmwasm_std::{Coin};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -8,12 +8,10 @@ pub struct InstantiateMsg {
     pub legacy_owner: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    UpdateLegacyOwner {
-        new_owner: String,
-    },
+    UpdateLegacyOwner { new_owner: String },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -26,10 +24,10 @@ pub enum QueryMsg {
         target_asset: Option<String>,
         assets: Vec<Coin>,
         assets_are_target_amount: bool,
-    }
+    },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct LegacyOwnerResponse {
     pub legacy_owner: String,

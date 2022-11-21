@@ -1,5 +1,4 @@
 pub const LEGACY_OWNER: &str = "alice";
-pub const PERMISSIONED_ADDRESS: &str = "hotcarl";
 
 #[cfg(test)]
 mod tests {
@@ -7,20 +6,11 @@ mod tests {
     use crate::contract::{instantiate, query, query_legacy_owner};
     use crate::sourced_coin::SourcedCoin;
     use crate::tests_helpers::get_test_instantiate_message;
-    use crate::ContractError;
-    use andromeda_modules::unified_asset::{ExecuteMsg, LegacyOwnerResponse, QueryMsg};
-    use cosmwasm_std::StdError::GenericErr;
+
+    use andromeda_modules::unified_asset::{LegacyOwnerResponse, QueryMsg};
 
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{
-        coin, coins, from_binary, to_binary, Attribute, BankMsg, Coin, CosmosMsg, Response, SubMsg,
-        Uint128, WasmMsg,
-    };
-
-    const NEW_OWNER: &str = "bob";
-    const ANYONE: &str = "anyone";
-    const RECEIVER: &str = "diane";
-    const PERMISSIONED_USDC_WALLET: &str = "hotearl";
+    use cosmwasm_std::{coin, from_binary, Coin, Uint128};
 
     #[test]
     fn instantiate_and_modify_owner() {
@@ -83,7 +73,7 @@ mod tests {
             assets_are_target_amount: false,
         };
 
-        let res = query(deps.as_ref(), mock_env(), query_msg.clone()).unwrap();
+        let res = query(deps.as_ref(), mock_env(), query_msg).unwrap();
         let res_value: SourcedCoin = from_binary(&res).unwrap();
         assert_eq!(
             res_value.coin,

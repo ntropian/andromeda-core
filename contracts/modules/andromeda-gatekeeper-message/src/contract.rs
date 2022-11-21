@@ -353,14 +353,14 @@ pub fn check_authorizations_against_fields(
                             // remove this auth from results, since its field mismatches
                             // still to be implemented: range and != matching logic
                             working_auths.retain(|item| item.0 != this_idx);
-                            offset = offset + 1;
+                            offset += 1;
                             break 'inner;
                         }
                         // else, keep this auth
                     } else {
                         // remove this auth from results, since it doesn't include the required field
                         working_auths.retain(|item| item.0 != this_idx);
-                        offset = offset + 1;
+                        offset += 1;
                         break 'inner;
                     }
                 }

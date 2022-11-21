@@ -1,39 +1,35 @@
 use ado_base::ADOContract;
 use common::error::ContractError;
-use cosmwasm_std::{ensure, Api, Order};
+use cosmwasm_std::ensure;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{
-    entry_point, to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env,
-    MessageInfo, Response, StdError, StdResult, Uint128, WasmMsg,
+    entry_point, to_binary, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response, StdError,
+    StdResult, Uint128,
 };
 
 use crate::constants::MAINNET_AXLUSDC_IBC;
-use crate::pair_contract::{PairContract, PairContracts};
+use crate::pair_contract::PairContracts;
 use crate::sourced_coin::SourcedCoin;
 use crate::sources::Sources;
 use crate::state::{State, STATE};
 use andromeda_modules::unified_asset::{
     ExecuteMsg, InstantiateMsg, LegacyOwnerResponse, MigrateMsg, QueryMsg,
 };
-use cw1::CanExecuteResponse;
-use cw2::{get_contract_version, set_contract_version};
-use cw_storage_plus::{Bound, Item};
-use schemars::JsonSchema;
-use semver::Version;
-use serde::{Deserialize, Serialize};
 
-use andromeda_modules::gatekeeper_common::{is_legacy_owner, update_legacy_owner, LEGACY_OWNER};
+use cw2::{get_contract_version, set_contract_version};
+
+use semver::Version;
+
+use andromeda_modules::gatekeeper_common::{update_legacy_owner, LEGACY_OWNER};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "obi-proxy-contract";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-const DEFAULT_LIMIT: u32 = 10;
-const MAX_LIMIT: u32 = 30;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
@@ -93,7 +89,7 @@ fn from_semver(err: semver::Error) -> StdError {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
@@ -106,7 +102,7 @@ pub fn execute(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::LegacyOwner {} => to_binary(&query_legacy_owner(deps)?),
         QueryMsg::UnifyAssets {
@@ -116,7 +112,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         } => to_binary(
             &unify_assets(
                 deps,
-                target_asset.unwrap_or(MAINNET_AXLUSDC_IBC.to_string()),
+                target_asset.unwrap_or_else(|| MAINNET_AXLUSDC_IBC.to_string()),
                 assets,
                 assets_are_target_amount,
             )
