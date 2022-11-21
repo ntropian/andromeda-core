@@ -3,6 +3,7 @@ use cw20_base::ContractError as Cw20ContractError;
 use cw721_base::ContractError as Cw721ContractError;
 use cw_utils::{Expiration, ParseReplyError, PaymentError};
 use std::convert::From;
+use std::fmt::Display;
 use std::string::FromUtf8Error;
 use thiserror::Error;
 

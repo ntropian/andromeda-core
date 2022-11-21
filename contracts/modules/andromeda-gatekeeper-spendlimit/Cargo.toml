@@ -1,5 +1,5 @@
 [package]
-name = "andromeda-gatekeeper-spendlimit"
+name = "andromeda-gatekeeper-delay"
 version = "0.1.0"
 edition = "2018"
 

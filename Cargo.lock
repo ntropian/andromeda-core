@@ -346,6 +346,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "andromeda-gatekeeper-spendlimit"
+version = "0.1.0"
+dependencies = [
+ "ado-base",
+ "andromeda-modules",
+ "common",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus",
+ "cw-utils",
+ "cw2",
+ "schemars",
+ "semver",
+ "serde",
+ "serde-json-value-wasm",
+ "serde-json-wasm",
+ "thiserror",
+]
+
+[[package]]
 name = "andromeda-gumball"
 version = "0.1.0"
 dependencies = [
@@ -591,6 +611,25 @@ dependencies = [
  "schemars",
  "semver",
  "serde",
+]
+
+[[package]]
+name = "andromeda-unified-asset"
+version = "0.1.2"
+dependencies = [
+ "ado-base",
+ "andromeda-modules",
+ "common",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus",
+ "cw-utils",
+ "cw1",
+ "cw2",
+ "schemars",
+ "semver",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]
@@ -872,6 +911,17 @@ dependencies = [
  "schemars",
  "serde",
  "thiserror",
+]
+
+[[package]]
+name = "cw1"
+version = "0.13.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "362649aa18f898ff8a7a18f2bfc5568e9ba56417f3c9ce0e01bc32ccb2e125e0"
+dependencies = [
+ "cosmwasm-std",
+ "schemars",
+ "serde",
 ]
 
 [[package]]
