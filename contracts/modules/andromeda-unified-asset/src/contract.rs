@@ -13,7 +13,7 @@ use crate::sourced_coin::SourcedCoin;
 use crate::sources::Sources;
 use crate::state::{State, STATE};
 use andromeda_modules::unified_asset::{
-    ExecuteMsg, InstantiateMsg, LegacyOwnerResponse, MigrateMsg, QueryMsg,
+    ExecuteMsg, InstantiateMsg, LegacyOwnerResponse, MigrateMsg, QueryMsg, UnifyAssetsMsg,
 };
 
 use cw2::{get_contract_version, set_contract_version};
@@ -105,11 +105,11 @@ pub fn execute(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::LegacyOwner {} => to_binary(&query_legacy_owner(deps)?),
-        QueryMsg::UnifyAssets {
+        QueryMsg::UnifyAssets(UnifyAssetsMsg {
             target_asset,
             assets,
             assets_are_target_amount,
-        } => to_binary(
+        }) => to_binary(
             &unify_assets(
                 deps,
                 target_asset.unwrap_or_else(|| MAINNET_AXLUSDC_IBC.to_string()),

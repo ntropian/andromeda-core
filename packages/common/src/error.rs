@@ -472,6 +472,9 @@ pub enum ContractError {
 
     #[error("Invalid Expiration Time")]
     InvalidExpirationTime {},
+
+    #[error("Cannot spend more than limit: {0} {1}")]
+    CannotSpendMoreThanLimit(String, String),
 }
 
 impl From<Cw20ContractError> for ContractError {

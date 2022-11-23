@@ -7,7 +7,7 @@ mod tests {
     use crate::sourced_coin::SourcedCoin;
     use crate::tests_helpers::get_test_instantiate_message;
 
-    use andromeda_modules::unified_asset::{LegacyOwnerResponse, QueryMsg};
+    use andromeda_modules::unified_asset::{LegacyOwnerResponse, QueryMsg, UnifyAssetsMsg};
 
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{coin, from_binary, Coin, Uint128};
@@ -65,13 +65,13 @@ mod tests {
 
         // under test conditions, "testtokens" are worth 100 USDC each
         let test_coins: Vec<Coin> = vec![coin(10000, "testtokens"), coin(100, "testtokens")];
-        let query_msg = QueryMsg::UnifyAssets {
+        let query_msg = QueryMsg::UnifyAssets(UnifyAssetsMsg {
             target_asset: Some(
                 "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034".to_string(),
             ),
             assets: test_coins,
             assets_are_target_amount: false,
-        };
+        });
 
         let res = query(deps.as_ref(), mock_env(), query_msg).unwrap();
         let res_value: SourcedCoin = from_binary(&res).unwrap();

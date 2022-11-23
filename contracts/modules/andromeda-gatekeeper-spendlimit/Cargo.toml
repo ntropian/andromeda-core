@@ -1,5 +1,5 @@
 [package]
-name = "andromeda-gatekeeper-delay"
+name = "andromeda-gatekeeper-spendlimit"
 version = "0.1.0"
 edition = "2018"
 
@@ -17,11 +17,14 @@ cosmwasm-std = "1.0.0"
 serde = { version = "1.0.127", default-features = false, features = ["derive"] }
 schemars = "0.8.3"
 cw-storage-plus = "0.13.2"
+cw1 = "0.13.2"
 cw2 = "0.13.2"
+cw20 = "0.13.2"
 semver = "1"
 serde-json-wasm = "0.4.1"
 cw-utils = "0.13.4"
 thiserror = { version = "1.0.21" }
+chrono = { path = "../../../packages/chrono" }
 
 andromeda-modules = { version = "0.1.0", path = "../../../packages/andromeda-modules" }
 common = { version = "0.1.0", path = "../../../packages/common" }
