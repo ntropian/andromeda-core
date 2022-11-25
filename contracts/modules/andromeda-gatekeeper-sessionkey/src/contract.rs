@@ -22,7 +22,7 @@ use common::{
 use semver::Version;
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:andromeda-addresslist";
+const CONTRACT_NAME: &str = "crates.io:andromeda-gatekeeper-sessionkey";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
