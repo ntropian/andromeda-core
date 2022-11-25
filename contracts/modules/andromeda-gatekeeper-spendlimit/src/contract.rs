@@ -30,7 +30,7 @@ const DEFAULT_LIMIT: u32 = 10;
 const MAX_LIMIT: u32 = 30;
 
 // temporary
-const ASSET_UNIFIER_CONTRACT_ADDRESS: &str = "andromeda-asset-unifier";
+const ASSET_UNIFIER_CONTRACT_ADDRESS: &str = "LOCAL_TEST";
 
 pub struct SourcedRepayMsg {
     pub repay_msg: Option<BankMsg>,

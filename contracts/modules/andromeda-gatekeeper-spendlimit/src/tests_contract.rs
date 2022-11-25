@@ -32,7 +32,7 @@ mod tests {
     const RECEIVER: &str = "diane";
     const PERMISSIONED_USDC_WALLET: &str = "hotearl";
 
-    const ASSET_UNIFIER_CONTRACT_ADDRESS: &str = "asset_unifier";
+    const ASSET_UNIFIER_CONTRACT_ADDRESS: &str = "LOCAL_TEST";
 
     #[test]
     fn instantiate_and_modify_owner() {
@@ -93,11 +93,16 @@ mod tests {
         // receiver or anyone else cannot execute them ... and gets PermissionedAddressDoesNotExist since
         // this is a spend, so contract assumes we're trying against spend limit
         // if not owner
-        let info = mock_info(RECEIVER, &[]);
-        let res = query(deps.as_ref(), mock_env(), query_msg.clone()).unwrap_err();
+        let res = query(deps.as_ref(), mock_env(), query_msg).unwrap();
+        let readable_res: CanSpendResponse = from_binary(&res).unwrap();
+        assert!(!readable_res.can_spend);
 
         // but owner can
-        let info = mock_info(LEGACY_OWNER_STR, &[]);
+        let query_msg = QueryMsg::CanSpend {
+            msgs: msgs.clone(),
+            sender: LEGACY_OWNER_STR.to_string(),
+            funds: vec![],
+        };
         let res = query(deps.as_ref(), mock_env(), query_msg).unwrap();
         let readable_res: CanSpendResponse = from_binary(&res).unwrap();
         assert!(readable_res.can_spend);

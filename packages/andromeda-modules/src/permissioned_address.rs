@@ -134,7 +134,7 @@ impl PermissionedAddressParams {
     /// * `current_time` - a Timestamp of the current time (or simulated reset time).
     /// Usually `env.block.time`
     pub fn should_reset(&self, current_time: Timestamp) -> bool {
-        current_time.seconds() > self.cooldown
+        current_time.seconds() >= self.cooldown
     }
 
     /// Sets a new reset time for spending limit for this wallet. This also
