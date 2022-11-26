@@ -4,8 +4,6 @@ pub mod error;
 pub mod state;
 pub mod submsgs;
 #[cfg(test)]
-mod tests_constants;
-#[cfg(test)]
 mod tests_contract;
 #[cfg(test)]
 pub mod tests_helpers;

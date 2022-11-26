@@ -11,10 +11,10 @@ mod tests {
 
     #[test]
     fn assert_is_legacy_owner() {
-        let now_env = mock_env();
+        let _now_env = mock_env();
         let mut deps = mock_dependencies();
         let owner: &str = "bob";
-        let config = State {
+        let _config = State {
             permissioned_addresses: vec![],
         };
         LEGACY_OWNER
@@ -26,7 +26,7 @@ mod tests {
     #[test]
     fn daily_spend_limit() {
         let deps = mock_dependencies();
-        let owner: &str = "bob";
+        let _owner: &str = "bob";
         let spender = "owner";
         let bad_spender: &str = "medusa";
         let dt = NaiveDateTime::new(
@@ -134,7 +134,7 @@ mod tests {
     #[test]
     fn monthly_spend_limit() {
         let deps = mock_dependencies();
-        let owner: &str = "bob";
+        let _owner: &str = "bob";
         let spender = "owner";
         let bad_spender: &str = "medusa";
         let dt = NaiveDateTime::new(

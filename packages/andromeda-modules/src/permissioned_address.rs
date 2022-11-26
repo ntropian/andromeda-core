@@ -1,8 +1,7 @@
 use std::convert::TryInto;
-use std::num::TryFromIntError;
 
 use chrono::{Datelike, NaiveDate, NaiveDateTime};
-use cosmwasm_std::{Coin, Deps, OverflowError, StdError, StdResult, Timestamp, Uint128};
+use cosmwasm_std::{Coin, Deps, StdError, StdResult, Timestamp, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -102,25 +101,19 @@ impl PermissionedAddress {
     pub fn address(&self) -> Option<String> {
         match &self.params {
             Some(params) => Some(params.address.clone()),
-            None => match &self.beneficiary_params {
-                Some(beneficiary_params) => Some(beneficiary_params.address.clone()),
-                None => None,
-            },
+            None => self
+                .beneficiary_params
+                .as_ref()
+                .map(|beneficiary_params| beneficiary_params.address.clone()),
         }
     }
 
     pub fn get_params_clone(&self) -> Option<PermissionedAddressParams> {
-        match &self.params {
-            Some(params) => Some(params.clone()),
-            None => None,
-        }
+        self.params.as_ref().cloned()
     }
 
     pub fn get_beneficiary_params_clone(&self) -> Option<PermissionedAddressParams> {
-        match &self.beneficiary_params {
-            Some(beneficiary_params) => Some(beneficiary_params.clone()),
-            None => None,
-        }
+        self.beneficiary_params.as_ref().cloned()
     }
 }
 
@@ -242,7 +235,7 @@ impl PermissionedAddress {
         coin: Coin,
         as_beneficiary: String,
     ) -> Result<(), ContractError> {
-        if as_beneficiary == "true".to_string() && self.is_beneficiary() {
+        if as_beneficiary == *"true" && self.is_beneficiary() {
             self.beneficiary_params = Some(
                 self.beneficiary_params
                     .clone()
@@ -293,7 +286,7 @@ impl PermissionedAddress {
         new_limit: CoinLimit,
         beneficiary: String,
     ) -> Result<(), StdError> {
-        if beneficiary == "true".to_string() {
+        if beneficiary == *"true" {
             match self.is_beneficiary() {
                 false => Err(StdError::GenericErr {
                     msg: "This address is permissioned, but not a beneficiary".to_string(),
@@ -449,11 +442,11 @@ impl PermissionedAddressParams {
         asset_unifier_contract_address: String,
         spend_vec: Vec<Coin>,
     ) -> Result<(SourcedCoins, PermissionedAddressParams), ContractError> {
-        let mut spend_tally = Uint128::from(0u128);
-        let mut spend_tally_sources: Sources = Sources { sources: vec![] };
+        let _spend_tally = Uint128::from(0u128);
+        let _spend_tally_sources: Sources = Sources { sources: vec![] };
 
         let all_assets = SourcedCoins {
-            coins: spend_vec.clone(),
+            coins: spend_vec,
             wrapped_sources: Sources { sources: vec![] },
         };
         let res = all_assets

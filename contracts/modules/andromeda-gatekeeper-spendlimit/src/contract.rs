@@ -26,8 +26,6 @@ use semver::Version;
 // version info for migration info
 const CONTRACT_NAME: &str = "obi-proxy-contract";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-const DEFAULT_LIMIT: u32 = 10;
-const MAX_LIMIT: u32 = 30;
 
 // temporary
 const ASSET_UNIFIER_CONTRACT_ADDRESS: &str = "LOCAL_TEST";
@@ -40,13 +38,13 @@ pub struct SourcedRepayMsg {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     LEGACY_OWNER.save(deps.storage, &msg.legacy_owner)?;
-    let mut cfg = State {
+    let cfg = State {
         permissioned_addresses: msg
             .permissioned_addresses
             .into_iter()
@@ -143,7 +141,7 @@ pub fn upsert_permissioned_address(
         ADOContract::default()
             .is_owner_or_operator(deps.storage, info.sender.as_str())
             .map_err(|e| CustomError::CustomError {
-                val: format!("ADO error, loc 1: {}", e.to_string())
+                val: format!("ADO error, loc 1: {}", e)
             })?
             || is_legacy_owner(deps.as_ref(), info.sender)?,
         CustomError::Unauthorized {}
@@ -175,7 +173,7 @@ pub fn rm_permissioned_address(
         ADOContract::default()
             .is_owner_or_operator(deps.storage, info.sender.as_str())
             .map_err(|e| CustomError::CustomError {
-                val: format!("ADO error, loc 2: {}", e.to_string())
+                val: format!("ADO error, loc 2: {}", e)
             })?
             || is_legacy_owner(deps.as_ref(), info.sender)?,
         CustomError::Unauthorized {}
@@ -187,7 +185,7 @@ pub fn rm_permissioned_address(
     {
         Err(CustomError::PermissionedAddressDoesNotExist {})
     } else {
-        cfg.rm_permissioned_address(doomed_permissioned_address.clone());
+        cfg.rm_permissioned_address(doomed_permissioned_address);
         STATE.save(deps.storage, &cfg)?;
         Ok(Response::new().add_attribute("action", "rm_permissioned_address"))
     }
@@ -206,7 +204,7 @@ pub fn update_permissioned_address_spend_limit(
         ADOContract::default()
             .is_owner_or_operator(deps.storage, info.sender.as_str())
             .map_err(|e| CustomError::CustomError {
-                val: format!("ADO error, loc 3: {}", e.to_string())
+                val: format!("ADO error, loc 3: {}", e)
             })?
             || is_legacy_owner(deps.as_ref(), info.sender)?,
         CustomError::Unauthorized {}
@@ -282,15 +280,13 @@ pub fn check_owner(deps: Deps, sender: String) -> bool {
     if let Ok(check1) = ADOContract::default()
         .is_owner_or_operator(deps.storage, sender.as_str())
         .map_err(|e| CustomError::CustomError {
-            val: format!("ADO error, loc 4: {}", e.to_string()),
+            val: format!("ADO error, loc 4: {}", e),
         })
     {
         return check1;
-    } else {
-        if let Ok(check2) = deps.api.addr_validate(&sender) {
-            if let Ok(check3) = is_legacy_owner(deps, check2) {
-                return check3;
-            }
+    } else if let Ok(check2) = deps.api.addr_validate(&sender) {
+        if let Ok(check3) = is_legacy_owner(deps, check2) {
+            return check3;
         }
     }
     false
@@ -300,7 +296,7 @@ pub fn can_spend(
     deps: Deps,
     env: Env,
     sender: String,
-    funds: Vec<Coin>,
+    _funds: Vec<Coin>,
     msgs: Vec<CosmosMsg>,
     asset_unifier_contract_address: String,
 ) -> Result<(CanSpendResponse, Option<SourcedCoins>), CustomError> {
@@ -335,7 +331,7 @@ pub fn can_spend(
     {
         if cfg.is_active_permissioned_address(deps.api.addr_validate(&sender)?)?
             && cfg.is_authorized_permissioned_address_contract(contract_addr)
-            && funds.len() == 0
+            && funds.is_empty()
         {
             return Ok((
                 CanSpendResponse {
@@ -367,7 +363,7 @@ pub fn can_spend(
             let _msg_type = processed_msg.process_and_get_msg_type();
             // can't immediately pass but can proceed to fund checking
             match funds {
-                x if x.len() == 0 => {
+                x if x.is_empty() => {
                     return Ok((
                         CanSpendResponse {
                             can_spend: true,

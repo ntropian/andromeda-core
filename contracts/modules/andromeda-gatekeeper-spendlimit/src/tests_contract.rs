@@ -3,12 +3,9 @@ pub const PERMISSIONED_ADDRESS: &str = "hotcarl";
 
 #[cfg(test)]
 mod tests {
-    use std::ptr::read;
 
     use super::*;
-    use crate::contract::{
-        can_spend, execute, instantiate, query, query_can_spend, query_permissioned_addresses,
-    };
+    use crate::contract::{can_spend, execute, instantiate, query, query_permissioned_addresses};
     use crate::tests_helpers::{
         add_test_permissioned_address, get_test_instantiate_message, test_spend_bank,
     };
@@ -19,15 +16,13 @@ mod tests {
     };
     use andromeda_modules::permissioned_address::PeriodType;
     use andromeda_modules::unified_asset::LegacyOwnerResponse;
-    use cosmwasm_std::StdError::GenericErr;
 
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{
-        coin, coins, from_binary, to_binary, Api, Attribute, BankMsg, Coin, CosmosMsg,
-        DistributionMsg, Response, StakingMsg, SubMsg, Uint128, WasmMsg,
+        coin, coins, from_binary, to_binary, Api, BankMsg, CosmosMsg, DistributionMsg, StakingMsg,
+        Uint128, WasmMsg,
     };
 
-    const NEW_OWNER: &str = "bob";
     const ANYONE: &str = "anyone";
     const RECEIVER: &str = "diane";
     const PERMISSIONED_USDC_WALLET: &str = "hotearl";
@@ -99,7 +94,7 @@ mod tests {
 
         // but owner can
         let query_msg = QueryMsg::CanSpend {
-            msgs: msgs.clone(),
+            msgs,
             sender: LEGACY_OWNER_STR.to_string(),
             funds: vec![],
         };
@@ -137,18 +132,18 @@ mod tests {
         };
 
         let bad_query_msg: QueryMsg = QueryMsg::CanSpend {
-            msgs: vec![send_msg.clone(), staking_msg.clone()],
+            msgs: vec![send_msg, staking_msg],
             sender: ANYONE.to_string(),
             funds: vec![],
         };
 
         // owner can send and stake
-        let res = query(deps.as_ref(), mock_env(), query_msg.clone()).unwrap();
+        let res = query(deps.as_ref(), mock_env(), query_msg).unwrap();
         let readable_res: CanSpendResponse = from_binary(&res).unwrap();
         assert!(readable_res.can_spend);
 
         // anyone cannot do these
-        let res = query(deps.as_ref(), mock_env(), bad_query_msg.clone()).unwrap();
+        let res = query(deps.as_ref(), mock_env(), bad_query_msg).unwrap();
         let readable_res: CanSpendResponse = from_binary(&res).unwrap();
         assert!(!readable_res.can_spend);
     }

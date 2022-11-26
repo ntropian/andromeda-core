@@ -49,20 +49,18 @@ impl SourcedCoins {
             assets_are_target_amount: amount_is_target,
         });
         // local single contract test uses test assets worth 100 USDC each
-        if asset_unifier_contract_address == "LOCAL_TEST".to_string() {
+        if asset_unifier_contract_address == *"LOCAL_TEST" {
             let multiplier: Uint128;
             let divisor: Uint128;
-            if self.coins[0].denom == JUNO_MAINNET_AXLUSDC_IBC.to_string() {
+            if self.coins[0].denom == *JUNO_MAINNET_AXLUSDC_IBC {
                 divisor = Uint128::from(1u128);
                 multiplier = Uint128::from(1u128);
+            } else if amount_is_target {
+                divisor = Uint128::from(100u128);
+                multiplier = Uint128::from(1u128);
             } else {
-                if amount_is_target {
-                    divisor = Uint128::from(100u128);
-                    multiplier = Uint128::from(1u128);
-                } else {
-                    divisor = Uint128::from(1u128);
-                    multiplier = Uint128::from(100u128);
-                }
+                divisor = Uint128::from(1u128);
+                multiplier = Uint128::from(100u128);
             }
             let converted_res = Ok(UnifiedAssetsResponse {
                 unified_asset: Coin {

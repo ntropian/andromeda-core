@@ -170,7 +170,7 @@ impl State {
         if ADOContract::default()
             .is_owner_or_operator(deps.storage, addr.as_str())
             .map_err(|e| CustomError::CustomError {
-                val: format!("ADO error, loc 6: {}", e.to_string()),
+                val: format!("ADO error, loc 6: {}", e),
             })?
             || is_legacy_owner(deps, deps.api.addr_validate(&addr)?)?
         {
@@ -178,59 +178,51 @@ impl State {
         }
         let this_wallet = self.maybe_get_permissioned_address(addr)?;
 
-        let cached_result: Result<SourcedCoins, CustomError>;
         // check if we should reset to full spend limit again
         // (i.e. reset time has passed)
-        if this_wallet.should_reset_active(current_time) {
-            cached_result = this_wallet
-                .check_spend_vec(
-                    deps,
-                    asset_unifier_contract_address.clone(),
-                    spend.clone(),
-                    true,
-                    false,
-                )
-                .map_err(|e| CustomError::CustomError { val: e.to_string() })
-        } else {
-            cached_result = this_wallet
-                .check_spend_vec(
-                    deps,
-                    asset_unifier_contract_address.clone(),
-                    spend.clone(),
-                    false,
-                    false,
-                )
-                .map_err(|e| CustomError::CustomError { val: e.to_string() })
-        }
+        let cached_result: Result<SourcedCoins, CustomError> =
+            if this_wallet.should_reset_active(current_time) {
+                this_wallet
+                    .check_spend_vec(
+                        deps,
+                        asset_unifier_contract_address.clone(),
+                        spend.clone(),
+                        true,
+                        false,
+                    )
+                    .map_err(|e| CustomError::CustomError { val: e.to_string() })
+            } else {
+                this_wallet
+                    .check_spend_vec(
+                        deps,
+                        asset_unifier_contract_address.clone(),
+                        spend.clone(),
+                        false,
+                        false,
+                    )
+                    .map_err(|e| CustomError::CustomError { val: e.to_string() })
+            };
 
         match cached_result {
             Err(e) => {
                 if this_wallet.should_reset_beneficiary(current_time) {
-                    match this_wallet.check_spend_vec(
-                        deps,
-                        asset_unifier_contract_address,
-                        spend.clone(),
-                        true,
-                        false,
-                    ) {
-                        Ok(coin) => {
-                            return Ok(coin);
-                        }
-                        _ => {}
-                    };
-                } else {
-                    match this_wallet.check_spend_vec(
+                    if let Ok(coin) = this_wallet.check_spend_vec(
                         deps,
                         asset_unifier_contract_address,
                         spend,
-                        false,
+                        true,
                         false,
                     ) {
-                        Ok(coin) => {
-                            return Ok(coin);
-                        }
-                        _ => {}
-                    }
+                        return Ok(coin);
+                    };
+                } else if let Ok(coin) = this_wallet.check_spend_vec(
+                    deps,
+                    asset_unifier_contract_address,
+                    spend,
+                    false,
+                    false,
+                ) {
+                    return Ok(coin);
                 }
                 Err(e)
             }
