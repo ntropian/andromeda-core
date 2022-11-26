@@ -41,35 +41,51 @@ impl SourcedCoins {
         &self,
         deps: Deps,
         asset_unifier_contract_address: String,
-        _amount_is_target: bool,
+        amount_is_target: bool,
     ) -> Result<UnifiedAssetsResponse, ContractError> {
         let query_msg: UnifyAssetsQueryMsg = UnifyAssetsQueryMsg::UnifyAssets(UnifyAssetsMsg {
             target_asset: Some(JUNO_MAINNET_AXLUSDC_IBC.to_string()),
             assets: self.coins.clone(),
-            assets_are_target_amount: false, //_amount_is_target
+            assets_are_target_amount: amount_is_target,
         });
-        #[cfg(test)]
         // local single contract test uses test assets worth 100 USDC each
         if asset_unifier_contract_address == "LOCAL_TEST".to_string() {
-            return Ok(UnifiedAssetsResponse {
+            let multiplier: Uint128;
+            let divisor: Uint128;
+            if self.coins[0].denom == JUNO_MAINNET_AXLUSDC_IBC.to_string() {
+                divisor = Uint128::from(1u128);
+                multiplier = Uint128::from(1u128);
+            } else {
+                if amount_is_target {
+                    divisor = Uint128::from(100u128);
+                    multiplier = Uint128::from(1u128);
+                } else {
+                    divisor = Uint128::from(1u128);
+                    multiplier = Uint128::from(100u128);
+                }
+            }
+            let converted_res = Ok(UnifiedAssetsResponse {
                 unified_asset: Coin {
-                    denom: JUNO_MAINNET_AXLUSDC_IBC.to_string(),
-                    amount: self.coins[0].amount.checked_mul(Uint128::from(100u128))?,
+                    denom: if !amount_is_target {
+                        JUNO_MAINNET_AXLUSDC_IBC.to_string()
+                    } else {
+                        self.coins[0].denom.clone()
+                    },
+                    amount: self.coins[0]
+                        .amount
+                        .checked_mul(multiplier)?
+                        .checked_div(divisor)
+                        .map_err(|_| StdError::generic_err("failed to convert to usdc"))?,
                 },
                 sources: Sources { sources: vec![] },
             });
-        } else {
-            return Err(ContractError::Std(StdError::GenericErr {
-                msg: "local test should use LOCAL_TEST as contract".to_string(),
-            }));
+            return converted_res;
         }
-        #[cfg(not(test))]
         let query_response: UnifiedAssetsResponse =
             deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                 contract_addr: asset_unifier_contract_address,
                 msg: to_binary(&query_msg)?,
             }))?;
-        #[cfg(not(test))]
         Ok(query_response)
     }
 

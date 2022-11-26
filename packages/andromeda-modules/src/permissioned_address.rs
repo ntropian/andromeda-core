@@ -281,7 +281,7 @@ impl PermissionedAddress {
                 asset_unifier_contract_address,
                 spend_vec,
             )?;
-            self.beneficiary_params = Some(new_params);
+            self.params = Some(new_params);
             Ok(sourced_coin)
         } else {
             Err(ContractError::PermissionedAddressDoesNotExist {})
@@ -479,9 +479,12 @@ impl PermissionedAddressParams {
         asset_unifier_contract_address: String,
         spend: Coin,
     ) -> Result<SourcedCoins, ContractError> {
+        println!("limit starting at {}", self.spend_limits[0].limit_remaining);
         let spend_limit_reduction: (u64, SourcedCoins) =
             self.simulate_reduce_limit(deps, vec![spend], asset_unifier_contract_address, false)?;
         self.spend_limits[0].limit_remaining = spend_limit_reduction.0;
+        println!("limit reduced by {:?}", spend_limit_reduction.1);
+        println!("limit is now {:?}", self.spend_limits[0].limit_remaining);
         Ok(spend_limit_reduction.1)
     }
 
