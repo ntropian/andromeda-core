@@ -371,15 +371,21 @@ version = "0.1.0"
 dependencies = [
  "ado-base",
  "andromeda-modules",
+ "andromeda-unified-asset",
+ "anyhow",
+ "assert_matches",
  "chrono",
  "common",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-multi-test",
  "cw-storage-plus",
  "cw-utils",
  "cw1",
  "cw2",
  "cw20",
+ "derivative",
+ "dummy-price-contract",
  "schemars",
  "semver",
  "serde",
@@ -738,6 +744,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08f9b8508dccb7687a1d6c4ce66b2b0ecef467c94667de27d8d7fe1f8d2a9cdc"
 
 [[package]]
+name = "assert_matches"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b34d609dfbaf33d6889b2b7106d3ca345eacad44200913df5ba02bfd31d2ba9"
+
+[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -986,6 +998,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmwasm-storage"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d18403b07304d15d304dad11040d45bbcaf78d603b4be3fb5e2685c16f9229b5"
+dependencies = [
+ "cosmwasm-std",
+ "serde",
+]
+
+[[package]]
 name = "cpufeatures"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1149,10 +1171,29 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw-storage-plus"
-version = "0.13.2"
+name = "cw-multi-test"
+version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9336ecef1e19d56cf6e3e932475fc6a3dee35eec5a386e07917a1d1ba6bb0e35"
+checksum = "a3f9a8ab7c3c29ec93cb7a39ce4b14a05e053153b4a17ef7cf2246af1b7c087e"
+dependencies = [
+ "anyhow",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus",
+ "cw-utils",
+ "derivative",
+ "itertools",
+ "prost",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "cw-storage-plus"
+version = "0.13.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "648b1507290bbc03a8d88463d7cd9b04b1fa0155e5eef366c4fa052b9caaac7a"
 dependencies = [
  "cosmwasm-std",
  "schemars",
@@ -1304,6 +1345,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "derivative"
+version = "2.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fcc3dd5e9e9c0b295d6e1e4d811fb6f157d5ffd784b8d202fc62eac8035a770b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "digest"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1317,6 +1369,21 @@ name = "doc-comment"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
+
+[[package]]
+name = "dummy-price-contract"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw2",
+ "schemars",
+ "serde",
+ "thiserror",
+]
 
 [[package]]
 name = "dyn-clone"

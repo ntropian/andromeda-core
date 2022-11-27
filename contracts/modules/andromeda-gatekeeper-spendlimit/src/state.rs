@@ -167,12 +167,7 @@ impl State {
         addr: String,
         spend: Vec<Coin>,
     ) -> Result<SourcedCoins, CustomError> {
-        if ADOContract::default()
-            .is_owner_or_operator(deps.storage, addr.as_str())
-            .map_err(|e| CustomError::CustomError {
-                val: format!("ADO error, loc 6: {}", e),
-            })?
-            || is_legacy_owner(deps, deps.api.addr_validate(&addr)?)?
+        if check_owner(deps, addr.clone())
         {
             return Ok(get_admin_sourced_coin());
         }

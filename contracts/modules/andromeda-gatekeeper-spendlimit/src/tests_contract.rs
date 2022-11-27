@@ -165,6 +165,7 @@ mod tests {
         let res = query_permissioned_addresses(deps.as_ref()).unwrap();
         assert!(res.permissioned_addresses.len() == 1);
         assert!(res.permissioned_addresses[0].address == PERMISSIONED_ADDRESS);
+        println!("permissioned address: {:?}", res.permissioned_addresses[0]);
 
         // check that can_spend returns true
         let res = can_spend(
@@ -179,6 +180,7 @@ mod tests {
             ASSET_UNIFIER_CONTRACT_ADDRESS.to_string(),
         )
         .unwrap();
+        println!("res: {:?}", res);
         assert!(res.0.can_spend);
 
         // and returns false with some huge amount

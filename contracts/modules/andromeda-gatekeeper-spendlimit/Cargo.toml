@@ -27,9 +27,15 @@ thiserror = { version = "1.0.21" }
 chrono = { path = "../../../packages/chrono" }
 
 andromeda-modules = { version = "0.1.0", path = "../../../packages/andromeda-modules" }
+andromeda-unified-asset = { path = "../andromeda-unified-asset" }
+dummy-price-contract = { path = "../dummy-price-contract" }
 common = { version = "0.1.0", path = "../../../packages/common" }
 serde-json-value-wasm = { version = "0.1.0", path = "../../../packages/serde-json-value-wasm" }
 ado-base = { path = "../../../packages/ado-base", version = "0.1.0"}
 
 [dev-dependencies]
-cosmwasm-schema = "1.0.0"
+anyhow = "1"
+assert_matches = "1"
+cosmwasm-schema = { version = "1.0.0" }
+cw-multi-test = { version = "0.13.4" }
+derivative = "2"

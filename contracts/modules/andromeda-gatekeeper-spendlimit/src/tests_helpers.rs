@@ -7,7 +7,7 @@ use crate::error::ContractError;
 use crate::tests_contract::PERMISSIONED_ADDRESS;
 pub const LEGACY_OWNER_STR: &str = "alice";
 
-const ASSET_UNIFIER_CONTRACT_ADDRESS: &str = "asset_unifier_contract_address";
+const ASSET_UNIFIER_CONTRACT_ADDRESS: &str = "LOCAL_TEST";
 
 pub fn get_test_instantiate_message(env: Env) -> InstantiateMsg {
     // instantiate the contract

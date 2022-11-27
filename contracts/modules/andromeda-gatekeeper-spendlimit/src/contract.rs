@@ -138,12 +138,12 @@ pub fn upsert_permissioned_address(
 ) -> Result<Response, CustomError> {
     let mut cfg = STATE.load(deps.storage)?;
     ensure!(
+        is_legacy_owner(deps.as_ref(), info.sender.clone())? ||
         ADOContract::default()
             .is_owner_or_operator(deps.storage, info.sender.as_str())
             .map_err(|e| CustomError::CustomError {
                 val: format!("ADO error, loc 1: {}", e)
-            })?
-            || is_legacy_owner(deps.as_ref(), info.sender)?,
+            })?,
         CustomError::Unauthorized {}
     );
     if cfg
@@ -420,6 +420,7 @@ pub fn can_spend(
         sender,
         funds,
     );
+    println!("res inside can_spend: {:?}", res);
     match res {
         Ok(coin) => Ok((
             CanSpendResponse {

@@ -8,6 +8,8 @@ mod tests_contract;
 #[cfg(test)]
 pub mod tests_helpers;
 #[cfg(test)]
+pub mod tests_integration;
+#[cfg(test)]
 mod tests_permissioned_address;
 #[cfg(test)]
 mod tests_state;
