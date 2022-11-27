@@ -41,8 +41,16 @@ pub fn instantiate(
             pair_contracts: vec![],
         },
     };
-    cfg.pair_contracts
-        .set_pair_contracts(cfg.home_network.clone())?;
+    match msg.unified_price_contract {
+        Some(contract) => {
+            cfg.pair_contracts
+            .set_pair_contracts(cfg.home_network.clone(), Some(contract))?;
+        }
+        None => {
+            cfg.pair_contracts
+            .set_pair_contracts(cfg.home_network.clone(), None)?;
+        }
+    }
     STATE.save(deps.storage, &cfg)?;
     Ok(Response::default())
 }

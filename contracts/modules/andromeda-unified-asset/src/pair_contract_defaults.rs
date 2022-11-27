@@ -58,6 +58,29 @@ pub fn get_testnet_pair_contracts() -> [PairContract; 3] {
     ]
 }
 
+pub fn get_custom_unified_pair_contracts(unified_contract: String) -> [PairContract; 3] {
+    [
+        PairContract {
+            contract_addr: unified_contract.clone(),
+            denom1: String::from(MAINNET_AXLUSDC_IBC),
+            denom2: String::from(MAINNET_DEX_DENOM),
+            query_format: PairMessageType::LoopType,
+        },
+        PairContract {
+            contract_addr: unified_contract.clone(),
+            denom1: String::from(TESTNET_DENOM),
+            denom2: String::from(MAINNET_DEX_DENOM),
+            query_format: PairMessageType::LoopType,
+        },
+        PairContract {
+            contract_addr: unified_contract,
+            denom1: String::from(TESTNET_DENOM),
+            denom2: String::from(MAINNET_AXLUSDC_IBC),
+            query_format: PairMessageType::JunoType,
+        },
+    ]
+}
+
 pub fn get_local_pair_contracts() -> [PairContract; 3] {
     [
         PairContract {

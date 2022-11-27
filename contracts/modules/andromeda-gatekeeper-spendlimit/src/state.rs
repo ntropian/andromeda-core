@@ -18,6 +18,7 @@ pub const STATE: Item<State> = Item::new("state");
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema, Debug)]
 pub struct State {
     pub permissioned_addresses: Vec<PermissionedAddress>,
+    pub asset_unifier_contract: String,
 }
 
 impl State {

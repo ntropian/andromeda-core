@@ -50,6 +50,7 @@ pub fn instantiate(
             .into_iter()
             .map(|params| PermissionedAddress::new(params, false))
             .collect::<Vec<PermissionedAddress>>(),
+        asset_unifier_contract: msg.asset_unifier_contract,
     };
     STATE.save(deps.storage, &cfg)?;
     Ok(Response::default())
@@ -233,7 +234,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, CustomError>
             sender,
             funds,
             msgs,
-            ASSET_UNIFIER_CONTRACT_ADDRESS.to_string(),
+            STATE.load(deps.storage)?.asset_unifier_contract,
         )?)
         .map_err(|e| CustomError::CustomError { val: e.to_string() }),
         QueryMsg::LegacyOwner {} => to_binary(&LegacyOwnerResponse {

@@ -9,6 +9,7 @@ use crate::permissioned_address::{CoinLimit, PermissionedAddressParams};
 pub struct InstantiateMsg {
     pub legacy_owner: Option<String>,
     pub permissioned_addresses: Vec<PermissionedAddressParams>,
+    pub asset_unifier_contract: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

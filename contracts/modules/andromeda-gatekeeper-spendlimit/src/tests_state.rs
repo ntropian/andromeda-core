@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::state::State;
+    use crate::tests_helpers;
     use andromeda_modules::gatekeeper_common::{is_legacy_owner, LEGACY_OWNER};
     use andromeda_modules::permissioned_address::{
         CoinLimit, PeriodType, PermissionedAddress, PermissionedAddressParams,
@@ -16,6 +17,7 @@ mod tests {
         let owner: &str = "bob";
         let _config = State {
             permissioned_addresses: vec![],
+            asset_unifier_contract: tests_helpers::ASSET_UNIFIER_CONTRACT_ADDRESS.to_string(),
         };
         LEGACY_OWNER
             .save(deps.as_mut().storage, &Some(owner.to_string()))
@@ -55,6 +57,7 @@ mod tests {
                 },
                 false,
             )],
+            asset_unifier_contract: tests_helpers::ASSET_UNIFIER_CONTRACT_ADDRESS.to_string(),
         };
 
         config
@@ -165,6 +168,7 @@ mod tests {
                 },
                 false,
             )],
+            asset_unifier_contract: tests_helpers::ASSET_UNIFIER_CONTRACT_ADDRESS.to_string(),
         };
 
         config

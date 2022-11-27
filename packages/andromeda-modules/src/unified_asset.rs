@@ -8,6 +8,7 @@ use crate::sources::Sources;
 pub struct InstantiateMsg {
     pub home_network: String,
     pub legacy_owner: Option<String>,
+    pub unified_price_contract: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

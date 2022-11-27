@@ -18,5 +18,6 @@ pub fn get_test_instantiate_message(
     InstantiateMsg {
         legacy_owner: Some(LEGACY_OWNER.to_string()),
         home_network: "local".to_string(),
+        unified_price_contract: None,
     }
 }

@@ -7,7 +7,7 @@ use crate::error::ContractError;
 use crate::tests_contract::PERMISSIONED_ADDRESS;
 pub const LEGACY_OWNER_STR: &str = "alice";
 
-const ASSET_UNIFIER_CONTRACT_ADDRESS: &str = "LOCAL_TEST";
+pub(crate) const ASSET_UNIFIER_CONTRACT_ADDRESS: &str = "LOCAL_TEST";
 
 pub fn get_test_instantiate_message(env: Env) -> InstantiateMsg {
     // instantiate the contract
@@ -28,6 +28,7 @@ pub fn get_test_instantiate_message(env: Env) -> InstantiateMsg {
             usdc_denom: Some("true".to_string()),
             default: Some(true),
         }],
+        asset_unifier_contract: ASSET_UNIFIER_CONTRACT_ADDRESS.to_string(),
     }
 }
 
