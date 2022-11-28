@@ -4,7 +4,7 @@ use andromeda_modules::{permissioned_address::{
 use anyhow::{anyhow, Result};
 use common::ado_base::ownership;
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, Empty, QueryRequest, StdError, Uint128, WasmMsg, WasmQuery, BankMsg, Coin, BlockInfo,
+    to_binary, Addr, CosmosMsg, Empty, QueryRequest, StdError, Uint128, WasmMsg, WasmQuery, BankMsg, Coin, BlockInfo, Timestamp,
 };
 use cw_multi_test::{App, AppResponse, Contract, ContractWrapper, Executor};
 use derivative::Derivative;
@@ -240,13 +240,13 @@ fn spendlimit_gatekeeper_multi_test() {
             }],
         })],
     };
-
-    // note this errors instead of returning false. Maybe a todo
     let can_spend_response: CanSpendResponse = router
         .wrap()
         .query_wasm_smart(gatekeeper_spendlimit_contract_addr.clone(), &query_msg)
         .unwrap();
     assert!(!can_spend_response.can_spend);
+    // note that the above errors instead of returning false. Maybe a todo
+
 
     // but we can spend $1
     let query_msg = andromeda_modules::gatekeeper_spendlimit::QueryMsg::CanSpend {
@@ -260,7 +260,50 @@ fn spendlimit_gatekeeper_multi_test() {
             }],
         })],
     };
+    let can_spend_response: CanSpendResponse = router
+        .wrap()
+        .query_wasm_smart(gatekeeper_spendlimit_contract_addr.clone(), &query_msg)
+        .unwrap();
+    assert!(can_spend_response.can_spend);
 
+    // now let's reset spend limit by going forward a day
+    let old_block_info = router.block_info();
+    router.set_block(BlockInfo {
+        height: old_block_info.height + 17280,
+        time: Timestamp::from_seconds(old_block_info.time.seconds() + 86400),
+        chain_id: old_block_info.chain_id,
+    });
+
+    // and we can spend $2 now
+    let query_msg = andromeda_modules::gatekeeper_spendlimit::QueryMsg::CanSpend {
+        sender: authorized_spender.clone(),
+        funds: vec![], msgs: vec![CosmosMsg::Bank(BankMsg::Send {
+            to_address: "bob".to_string(),
+            amount: vec![Coin {
+                denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
+                    .to_string(),
+                amount: Uint128::from(2_000_000u128),
+            }],
+        })],
+    };
+    let can_spend_response: CanSpendResponse = router
+        .wrap()
+        .query_wasm_smart(gatekeeper_spendlimit_contract_addr.clone(), &query_msg)
+        .unwrap();
+    assert!(can_spend_response.can_spend);
+
+    // we can also spend some "ujunox"
+    let query_msg = andromeda_modules::gatekeeper_spendlimit::QueryMsg::CanSpend {
+        sender: authorized_spender.clone(),
+        funds: vec![], msgs: vec![CosmosMsg::Bank(BankMsg::Send {
+            to_address: "bob".to_string(),
+            amount: vec![Coin {
+                denom: "ujunox"
+                    .to_string(),
+                amount: Uint128::from(2_000_000u128),
+            }],
+        })],
+    };
     let can_spend_response: CanSpendResponse = router
         .wrap()
         .query_wasm_smart(gatekeeper_spendlimit_contract_addr.clone(), &query_msg)
