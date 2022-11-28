@@ -171,12 +171,11 @@ pub fn rm_permissioned_address(
 ) -> Result<Response, CustomError> {
     let mut cfg = STATE.load(deps.storage)?;
     ensure!(
-        ADOContract::default()
+        is_legacy_owner(deps.as_ref(), info.sender.clone())? || ADOContract::default()
             .is_owner_or_operator(deps.storage, info.sender.as_str())
             .map_err(|e| CustomError::CustomError {
                 val: format!("ADO error, loc 2: {}", e)
-            })?
-            || is_legacy_owner(deps.as_ref(), info.sender)?,
+            })?,
         CustomError::Unauthorized {}
     );
     if !cfg
@@ -202,12 +201,12 @@ pub fn update_permissioned_address_spend_limit(
 ) -> Result<Response, CustomError> {
     let mut cfg = STATE.load(deps.storage)?;
     ensure!(
-        ADOContract::default()
+        is_legacy_owner(deps.as_ref(), info.sender.clone())?
+        || ADOContract::default()
             .is_owner_or_operator(deps.storage, info.sender.as_str())
             .map_err(|e| CustomError::CustomError {
                 val: format!("ADO error, loc 3: {}", e)
-            })?
-            || is_legacy_owner(deps.as_ref(), info.sender)?,
+            })?,
         CustomError::Unauthorized {}
     );
     let wallet = cfg
@@ -216,6 +215,7 @@ pub fn update_permissioned_address_spend_limit(
         .find(|wallet| wallet.address() == Some(permissioned_address.clone()))
         .ok_or(CustomError::PermissionedAddressDoesNotExist {})?;
     wallet.update_spend_limit(new_spend_limits, is_beneficiary)?;
+    STATE.save(deps.storage, &cfg)?;
     Ok(Response::new())
 }
 

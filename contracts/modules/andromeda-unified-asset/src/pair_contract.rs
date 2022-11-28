@@ -12,9 +12,10 @@ use crate::{
     simulation::{DexQueryMsg, Token1ForToken2PriceResponse, Token2ForToken1PriceResponse},
     simulation::{DexQueryMsgFormatted, DexQueryMsgType, FormatQueryMsg, Tally},
     sourced_coin::SourcedCoin,
-    sources::{Source, Sources},
     ContractError,
 };
+
+use andromeda_modules::sources::{Source, Sources};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema, Debug)]
 pub enum PairMessageType {

@@ -1,7 +1,7 @@
 use cosmwasm_std::{Coin, Uint128};
 
 use crate::sourced_coin::SourcedCoin;
-use crate::sources::{Source, Sources};
+use andromeda_modules::sources::{Source, Sources};
 
 pub const MAINNET_AXLUSDC_IBC: &str =
     "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034";

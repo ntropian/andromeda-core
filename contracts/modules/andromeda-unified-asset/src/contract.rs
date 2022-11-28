@@ -10,10 +10,10 @@ use cosmwasm_std::{
 use crate::constants::MAINNET_AXLUSDC_IBC;
 use crate::pair_contract::PairContracts;
 use crate::sourced_coin::SourcedCoin;
-use crate::sources::Sources;
+use andromeda_modules::sources::Sources;
 use crate::state::{State, STATE};
 use andromeda_modules::unified_asset::{
-    ExecuteMsg, InstantiateMsg, LegacyOwnerResponse, MigrateMsg, QueryMsg, UnifyAssetsMsg,
+    ExecuteMsg, InstantiateMsg, LegacyOwnerResponse, MigrateMsg, QueryMsg, UnifyAssetsMsg, UnifiedAssetsResponse,
 };
 
 use cw2::{get_contract_version, set_contract_version};
@@ -143,7 +143,7 @@ pub fn unify_assets(
     target_asset: String,
     assets: Vec<Coin>,
     assets_are_target_amount: bool,
-) -> Result<SourcedCoin, ContractError> {
+) -> Result<UnifiedAssetsResponse, ContractError> {
     let pair_contracts = STATE.load(deps.storage)?.pair_contracts;
     let mut return_coin = SourcedCoin {
         coin: Coin {
@@ -174,7 +174,7 @@ pub fn unify_assets(
                     wrapped_sources: Sources { sources: vec![] },
                 };
                 let mut converted = unconverted
-                    .get_converted_to_usdc(deps, pair_contracts.clone(), assets_are_target_amount)
+                    .get_converted_to_usdc(deps, STATE.load(deps.storage)?.pair_contracts, assets_are_target_amount)
                     .map_err(|e| {
                         common::error::ContractError::Std(StdError::GenericErr {
                             msg: format!("{:?}", e),
@@ -194,5 +194,8 @@ pub fn unify_assets(
             } // todo: more general handling
         }
     }
-    Ok(return_coin)
+    Ok(UnifiedAssetsResponse {
+        unified_asset: return_coin.coin,
+        sources: return_coin.wrapped_sources,
+    })
 }

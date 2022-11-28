@@ -3,7 +3,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::pair_contract::PairContracts;
-use crate::sources::Sources;
+use andromeda_modules::sources::Sources;
 use crate::{
     constants::{get_usdc_sourced_coin, MAINNET_AXLUSDC_IBC},
     ContractError,

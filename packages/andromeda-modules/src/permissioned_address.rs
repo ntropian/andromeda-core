@@ -397,6 +397,7 @@ impl PermissionedAddressParams {
             coins: spend,
             wrapped_sources: Sources { sources: vec![] },
         };
+        println!("trying to convert coins {} to usdc", unconverted_coin.coins[0]);
         let converted_spend_amt = unconverted_coin
             .convert_to_usdc(deps, asset_unifier_contract_address, false)
             .unwrap();
@@ -405,6 +406,7 @@ impl PermissionedAddressParams {
             false => self.spend_limits[0].limit_remaining,
             true => self.spend_limits[0].amount,
         };
+        println!("subtracting {} from {}", converted_spend_amt.unified_asset, limit_to_check);
         let limit_remaining = limit_to_check
             .checked_sub(converted_spend_amt.unified_asset.amount.u128() as u64)
             .ok_or_else(|| {

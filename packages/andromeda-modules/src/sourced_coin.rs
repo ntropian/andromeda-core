@@ -16,6 +16,7 @@ pub struct SourcedCoins {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[serde(rename_all = "snake_case")]
 pub enum UnifyAssetsQueryMsg {
     UnifyAssets(UnifyAssetsMsg),
 }
@@ -43,6 +44,15 @@ impl SourcedCoins {
         asset_unifier_contract_address: String,
         amount_is_target: bool,
     ) -> Result<UnifiedAssetsResponse, ContractError> {
+        if self.coins.len() == 1 && self.coins[0].denom == JUNO_MAINNET_AXLUSDC_IBC.to_string() {
+            return Ok(UnifiedAssetsResponse {
+                unified_asset: Coin {
+                    denom: JUNO_MAINNET_AXLUSDC_IBC.to_string(),
+                    amount: self.coins[0].amount,
+                },
+                sources: Sources { sources: vec![] },
+            });
+        }
         let query_msg: UnifyAssetsQueryMsg = UnifyAssetsQueryMsg::UnifyAssets(UnifyAssetsMsg {
             target_asset: Some(JUNO_MAINNET_AXLUSDC_IBC.to_string()),
             assets: self.coins.clone(),

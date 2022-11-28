@@ -1,6 +1,7 @@
 use cosmwasm_std::{Coin, Uint128};
 
-use crate::{sourced_coin::SourcedCoin, sources::Source, sources::Sources, ContractError};
+use crate::{sourced_coin::SourcedCoin, ContractError};
+use andromeda_modules::{sources::Source, sources::Sources};
 
 pub fn get_test_sourced_coin(
     denoms: (String, String),
