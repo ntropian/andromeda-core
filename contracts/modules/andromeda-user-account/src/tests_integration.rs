@@ -1,9 +1,9 @@
-use andromeda_modules::{permissioned_address::{
-    PeriodType, PermissionedAddressParams, PermissionedAddresssResponse,
-}, gatekeeper_spendlimit::CanSpendResponse};
-use cosmwasm_std::{
-    Addr, Empty, Uint128, Coin, BlockInfo, Timestamp,
+use andromeda_modules::{
+    gatekeeper_spendlimit::CanSpendResponse,
+    permissioned_address::{PeriodType, PermissionedAddressParams, PermissionedAddresssResponse},
+    user_account::UserAccount,
 };
+use cosmwasm_std::{Addr, BlockInfo, Coin, Empty, Timestamp, Uint128};
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
 use dummy_price_contract::msg::AssetPrice;
 
@@ -35,6 +35,26 @@ fn dummy_price_contract() -> Box<dyn Contract<Empty>> {
 #[allow(dead_code)]
 fn gatekeeper_spendlimit_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
+        andromeda_gatekeeper_spendlimit::contract::execute,
+        andromeda_gatekeeper_spendlimit::contract::instantiate,
+        andromeda_gatekeeper_spendlimit::contract::query,
+    );
+    Box::new(contract)
+}
+
+#[allow(dead_code)]
+fn gatekeeper_message_contract() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new(
+        andromeda_gatekeeper_message::contract::execute,
+        andromeda_gatekeeper_message::contract::instantiate,
+        andromeda_gatekeeper_message::contract::query,
+    );
+    Box::new(contract)
+}
+
+#[allow(dead_code)]
+fn user_account_contract() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new(
         crate::contract::execute,
         crate::contract::instantiate,
         crate::contract::query,
@@ -53,6 +73,25 @@ pub fn asset_unifier_instantiate_msg(
     }
 }
 
+pub fn user_account_instantiate_msg(
+    legacy_owner: Option<String>,
+    spendlimit_gatekeeper_contract_addr: Option<String>,
+    message_gatekeeper_contract_addr: Option<String>,
+) -> andromeda_modules::user_account::InstantiateMsg {
+    andromeda_modules::user_account::InstantiateMsg {
+        account: UserAccount {
+            legacy_owner,
+            spendlimit_gatekeeper_contract_addr,
+            message_gatekeeper_contract_addr,
+            delay_gatekeeper_contract_addr: None,
+            sessionkey_gatekeeper_contract_addr: None,
+            debt_gatekeeper_contract_addr: None,
+        },
+        starting_usd_debt: todo!(),
+        owner_updates_delay_secs: todo!(),
+    }
+}
+
 #[test]
 fn spendlimit_gatekeeper_multi_test() {
     // Create the owner account
@@ -66,6 +105,8 @@ fn spendlimit_gatekeeper_multi_test() {
     let dummy_price_contract_code_id = router.store_code(dummy_price_contract());
     let gatekeeper_spendlimit_contract_code_id =
         router.store_code(gatekeeper_spendlimit_contract());
+    let gatekeeper_message_contract_code_id = router.store_code(gatekeeper_message_contract());
+    let user_account_code_id = router.store_code(user_account_contract());
 
     // Setup dummy price contract
     let init_msg = dummy_price_contract::msg::InstantiateMsg {
@@ -115,7 +156,7 @@ fn spendlimit_gatekeeper_multi_test() {
         )
         .unwrap();
 
-    // last one: setup spendlimit gatekeeper contract (main contract we'll be interacting with)
+    // setup spendlimit gatekeeper contract
     let init_msg = andromeda_modules::gatekeeper_spendlimit::InstantiateMsg {
         legacy_owner: Some(legacy_owner.to_string()),
         permissioned_addresses: vec![],
@@ -133,6 +174,23 @@ fn spendlimit_gatekeeper_multi_test() {
         )
         .unwrap();
 
+    // Setup message gatekeeper contract
+    let init_msg = asset_unifier_instantiate_msg(
+        Some(legacy_owner.to_string()),
+        mocked_dummy_contract_addr.to_string(),
+    );
+    // Instantiate the asset unifier contract
+    let mocked_asset_unifier_addr = router
+        .instantiate_contract(
+            asset_unifier_contract_code_id,
+            legacy_owner.clone(),
+            &init_msg,
+            &[],
+            "asset_unifier",
+            None,
+        )
+        .unwrap();
+
     let authorized_spender = "alice".to_string();
 
     let block_info: BlockInfo = router.block_info();
@@ -145,7 +203,7 @@ fn spendlimit_gatekeeper_multi_test() {
             period_multiple: 1,
             spend_limits: vec![andromeda_modules::permissioned_address::CoinLimit {
                 denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
-                .to_string(),
+                    .to_string(),
                 amount: 100_000_000u64,
                 limit_remaining: 100_000_000u64,
             }],
@@ -176,10 +234,10 @@ fn spendlimit_gatekeeper_multi_test() {
     let query_msg = andromeda_modules::gatekeeper_spendlimit::QueryMsg::CanSpend {
         sender: authorized_spender.clone(),
         funds: vec![Coin {
-                denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
-                    .to_string(),
-                amount: Uint128::from(99_000_000u128),
-            }],
+            denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
+                .to_string(),
+            amount: Uint128::from(99_000_000u128),
+        }],
     };
 
     let can_spend_response: CanSpendResponse = router
@@ -191,16 +249,17 @@ fn spendlimit_gatekeeper_multi_test() {
     // spending it should update the spend limit (not implemented here; called by the account module)
     // so let's manually update
     // note that only limit remaining changes (safer implementation todo)
-    let msg = andromeda_modules::gatekeeper_spendlimit::ExecuteMsg::UpdatePermissionedAddressSpendLimit {
-        permissioned_address: authorized_spender.clone(),
-        new_spend_limits: andromeda_modules::permissioned_address::CoinLimit {
-            denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
-            .to_string(),
-            amount: 100_000_000u64,
-            limit_remaining: 1_000_000u64,
-        },
-        is_beneficiary: "false".to_string(),
-    };
+    let msg =
+        andromeda_modules::gatekeeper_spendlimit::ExecuteMsg::UpdatePermissionedAddressSpendLimit {
+            permissioned_address: authorized_spender.clone(),
+            new_spend_limits: andromeda_modules::permissioned_address::CoinLimit {
+                denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
+                    .to_string(),
+                amount: 100_000_000u64,
+                limit_remaining: 1_000_000u64,
+            },
+            is_beneficiary: "false".to_string(),
+        };
     let _ = router
         .execute_contract(
             legacy_owner.clone(),
@@ -225,10 +284,10 @@ fn spendlimit_gatekeeper_multi_test() {
     let query_msg = andromeda_modules::gatekeeper_spendlimit::QueryMsg::CanSpend {
         sender: authorized_spender.clone(),
         funds: vec![Coin {
-                denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
-                    .to_string(),
-                amount: Uint128::from(2_000_000u128),
-            }],
+            denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
+                .to_string(),
+            amount: Uint128::from(2_000_000u128),
+        }],
     };
     let can_spend_response: CanSpendResponse = router
         .wrap()
@@ -237,15 +296,13 @@ fn spendlimit_gatekeeper_multi_test() {
     assert!(!can_spend_response.can_spend);
     // note that the above errors instead of returning false. Maybe a todo
 
-
     // nor can we spend 2 "ujunox"
     let query_msg = andromeda_modules::gatekeeper_spendlimit::QueryMsg::CanSpend {
         sender: authorized_spender.clone(),
         funds: vec![Coin {
-                denom: "ujunox"
-                    .to_string(),
-                amount: Uint128::from(2_000_000u128),
-            }],
+            denom: "ujunox".to_string(),
+            amount: Uint128::from(2_000_000u128),
+        }],
     };
     let can_spend_response: CanSpendResponse = router
         .wrap()
@@ -257,10 +314,10 @@ fn spendlimit_gatekeeper_multi_test() {
     let query_msg = andromeda_modules::gatekeeper_spendlimit::QueryMsg::CanSpend {
         sender: authorized_spender.clone(),
         funds: vec![Coin {
-                denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
-                    .to_string(),
-                amount: Uint128::from(1_000_000u128),
-            }],
+            denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
+                .to_string(),
+            amount: Uint128::from(1_000_000u128),
+        }],
     };
     let can_spend_response: CanSpendResponse = router
         .wrap()
@@ -280,10 +337,10 @@ fn spendlimit_gatekeeper_multi_test() {
     let query_msg = andromeda_modules::gatekeeper_spendlimit::QueryMsg::CanSpend {
         sender: authorized_spender.clone(),
         funds: vec![Coin {
-                denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
-                    .to_string(),
-                amount: Uint128::from(2_000_000u128),
-            }],
+            denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
+                .to_string(),
+            amount: Uint128::from(2_000_000u128),
+        }],
     };
     let can_spend_response: CanSpendResponse = router
         .wrap()
@@ -295,15 +352,13 @@ fn spendlimit_gatekeeper_multi_test() {
     let query_msg = andromeda_modules::gatekeeper_spendlimit::QueryMsg::CanSpend {
         sender: authorized_spender.clone(),
         funds: vec![Coin {
-                denom: "ujunox"
-                    .to_string(),
-                amount: Uint128::from(2_000_000u128),
-            }],
+            denom: "ujunox".to_string(),
+            amount: Uint128::from(2_000_000u128),
+        }],
     };
     let can_spend_response: CanSpendResponse = router
         .wrap()
         .query_wasm_smart(gatekeeper_spendlimit_contract_addr.clone(), &query_msg)
         .unwrap();
     assert!(can_spend_response.can_spend);
-
 }

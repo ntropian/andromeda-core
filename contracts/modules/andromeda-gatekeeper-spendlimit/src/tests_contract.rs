@@ -20,7 +20,7 @@ mod tests {
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{
         coin, coins, from_binary, to_binary, Api, BankMsg, CosmosMsg, DistributionMsg, StakingMsg,
-        Uint128, WasmMsg,
+        Uint128, WasmMsg, Coin,
     };
 
     const ANYONE: &str = "anyone";
@@ -64,25 +64,12 @@ mod tests {
         )
         .unwrap();
 
-        let msgs = vec![
-            BankMsg::Send {
-                to_address: RECEIVER.to_string(),
-                amount: coins(10000, "DAI"),
-            }
-            .into(),
-            /*WasmMsg::Execute {
-                contract_addr: "some contract".into(),
-                msg: to_binary(&freeze).unwrap(),
-                funds: vec![],
-            }
-            .into(),*/
-        ];
+        let test_coins = coins(10000, "DAI");
 
         // make some nice message
         let query_msg = QueryMsg::CanSpend {
-            msgs: msgs.clone(),
             sender: RECEIVER.to_string(),
-            funds: vec![],
+            funds: test_coins.clone(),
         };
 
         // receiver or anyone else cannot execute them ... and gets PermissionedAddressDoesNotExist since
@@ -94,9 +81,8 @@ mod tests {
 
         // but owner can
         let query_msg = QueryMsg::CanSpend {
-            msgs,
             sender: LEGACY_OWNER_STR.to_string(),
-            funds: vec![],
+            funds: test_coins,
         };
         let res = query(deps.as_ref(), mock_env(), query_msg).unwrap();
         let readable_res: CanSpendResponse = from_binary(&res).unwrap();
@@ -116,25 +102,17 @@ mod tests {
         .unwrap();
 
         // let us make some queries... different msg types by owner and by other
-        let send_msg = CosmosMsg::Bank(BankMsg::Send {
-            to_address: ANYONE.to_string(),
-            amount: coins(12345, "ushell"),
-        });
-        let staking_msg = CosmosMsg::Staking(StakingMsg::Delegate {
-            validator: ANYONE.to_string(),
-            amount: coin(70000, "ureef"),
-        });
+        let test_coins = vec![coin(12345, "ushell"), 
+        coin(70000, "ureef")];
 
         let query_msg: QueryMsg = QueryMsg::CanSpend {
-            msgs: vec![send_msg.clone(), staking_msg.clone()],
             sender: LEGACY_OWNER_STR.to_string(),
-            funds: vec![],
+            funds: test_coins.clone(),
         };
 
         let bad_query_msg: QueryMsg = QueryMsg::CanSpend {
-            msgs: vec![send_msg, staking_msg],
             sender: ANYONE.to_string(),
-            funds: vec![],
+            funds: test_coins,
         };
 
         // owner can send and stake
@@ -172,11 +150,7 @@ mod tests {
             deps.as_ref(),
             current_env.clone(),
             PERMISSIONED_ADDRESS.to_string(),
-            vec![],
-            vec![CosmosMsg::Bank(BankMsg::Send {
-                to_address: RECEIVER.to_string(),
-                amount: coins(9_000u128, "testtokens"),
-            })],
+            coins(9_000u128, "testtokens"),
             ASSET_UNIFIER_CONTRACT_ADDRESS.to_string(),
         )
         .unwrap();
@@ -188,56 +162,11 @@ mod tests {
             deps.as_ref(),
             current_env.clone(),
             PERMISSIONED_ADDRESS.to_string(),
-            vec![],
-            vec![CosmosMsg::Bank(BankMsg::Send {
-                to_address: RECEIVER.to_string(),
-                amount: coins(999_999_999_000u128, "testtokens"),
-            })],
+            coins(999_999_999_000u128, "testtokens"),
             ASSET_UNIFIER_CONTRACT_ADDRESS.to_string(),
         )
         .unwrap();
         assert!(!res.0.can_spend);
-
-        // plus returns false with some unsupported kind of msg
-        let expected_res = CanSpendResponse {
-            can_spend: false,
-            reason: "Distribution CosmosMsg not yet supported".to_string(),
-        };
-        let res = can_spend(
-            deps.as_ref(),
-            current_env.clone(),
-            PERMISSIONED_ADDRESS.to_string(),
-            vec![],
-            vec![CosmosMsg::Distribution(
-                DistributionMsg::SetWithdrawAddress {
-                    address: RECEIVER.to_string(),
-                },
-            )],
-            ASSET_UNIFIER_CONTRACT_ADDRESS.to_string(),
-        )
-        .unwrap();
-        assert_eq!(res.0, expected_res);
-
-        // and returns true with authorized contract
-        let res = can_spend(
-            deps.as_ref(),
-            current_env.clone(),
-            PERMISSIONED_ADDRESS.to_string(),
-            vec![],
-            vec![CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: "juno1x5xz6wu8qlau8znmc60tmazzj3ta98quhk7qkamul3am2x8fsaqqcwy7n9"
-                    .to_string(),
-                msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                    recipient: RECEIVER.to_string(),
-                    amount: Uint128::from(1u128),
-                })
-                .unwrap(),
-                funds: vec![],
-            })],
-            ASSET_UNIFIER_CONTRACT_ADDRESS.to_string(),
-        )
-        .unwrap();
-        assert!(res.0.can_spend);
 
         // actually spend as the permissioned address
         let owner_info = mock_info(LEGACY_OWNER_STR, &[]);

@@ -74,16 +74,11 @@ pub fn test_spend_bank(
     amount: Vec<Coin>,
     info: MessageInfo,
 ) -> Result<CanSpendResponse, ContractError> {
-    let send_msg = CosmosMsg::Bank(BankMsg::Send {
-        to_address,
-        amount: amount.clone(),
-    });
     let res = can_spend(
         deps.as_ref(),
         current_env,
         info.sender.to_string(),
         amount,
-        vec![send_msg],
         ASSET_UNIFIER_CONTRACT_ADDRESS.to_string(),
     );
     let unwrapped_res = match res {

@@ -44,7 +44,6 @@ pub enum QueryMsg {
     CanSpend {
         sender: String,
         funds: Vec<Coin>,
-        msgs: Vec<CosmosMsg>,
     },
 }
 

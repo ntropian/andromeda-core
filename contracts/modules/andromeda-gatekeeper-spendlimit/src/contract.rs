@@ -15,7 +15,6 @@ use cosmwasm_std::{
 
 use crate::error::ContractError as CustomError;
 use crate::state::{State, STATE};
-use crate::submsgs::{PendingSubmsg, SubmsgType};
 use andromeda_modules::gatekeeper_spendlimit::{
     CanSpendResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
 };
@@ -227,13 +226,11 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, CustomError>
         QueryMsg::CanSpend {
             sender,
             funds,
-            msgs,
         } => to_binary(&query_can_spend(
             deps,
             env,
             sender,
             funds,
-            msgs,
             STATE.load(deps.storage)?.asset_unifier_contract,
         )?)
         .map_err(|e| CustomError::CustomError { val: e.to_string() }),
@@ -263,7 +260,6 @@ pub fn query_can_spend(
     env: Env,
     sender: String,
     funds: Vec<Coin>,
-    msgs: Vec<CosmosMsg>,
     asset_unifier_contract_address: String,
 ) -> Result<CanSpendResponse, CustomError> {
     Ok(can_spend(
@@ -271,7 +267,6 @@ pub fn query_can_spend(
         env,
         sender,
         funds,
-        msgs,
         asset_unifier_contract_address,
     )?
     .0)
@@ -297,123 +292,10 @@ pub fn can_spend(
     deps: Deps,
     env: Env,
     sender: String,
-    _funds: Vec<Coin>,
-    msgs: Vec<CosmosMsg>,
+    funds: Vec<Coin>,
     asset_unifier_contract_address: String,
 ) -> Result<(CanSpendResponse, Option<SourcedCoins>), CustomError> {
-    // if owner, always (in spend limit context, anyway)
-    if check_owner(deps, sender.clone()) {
-        return Ok((
-            CanSpendResponse {
-                can_spend: true,
-                reason: "Spender is owner/operator".to_string(),
-            },
-            None,
-        ));
-    }
-
-    // if one of authorized token contracts and spender is permissioned address, yes
-    if msgs.len() > 1 {
-        return Ok((
-            CanSpendResponse {
-                can_spend: false,
-                reason: "Multi-message txes with permissioned addresss not supported yet"
-                    .to_string(),
-            },
-            None,
-        ));
-    }
     let cfg = STATE.load(deps.storage)?;
-    if let CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr,
-        msg: _,
-        funds,
-    }) = msgs[0].clone()
-    {
-        if cfg.is_active_permissioned_address(deps.api.addr_validate(&sender)?)?
-            && cfg.is_authorized_permissioned_address_contract(contract_addr)
-            && funds.is_empty()
-        {
-            return Ok((
-                CanSpendResponse {
-                    can_spend: true,
-                    reason: "Active permissioned address spending blanket-authorized token"
-                        .to_string(),
-                },
-                None,
-            ));
-        }
-    };
-    let funds: Vec<Coin> = match msgs[0].clone() {
-        //strictly speaking cw20 spend limits not supported yet, unless blanket authorized.
-        //As kludge, send/transfer is blocked if debt exists. Otherwise, depends on
-        //authorization.
-        CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: _,
-            msg: _,
-            funds,
-        }) => {
-            let mut processed_msg = PendingSubmsg {
-                msg: msgs[0].clone(),
-                contract_addr: None,
-                binarymsg: None,
-                funds: vec![],
-                ty: SubmsgType::Unknown,
-            };
-            processed_msg.add_funds(funds.to_vec());
-            let _msg_type = processed_msg.process_and_get_msg_type();
-            // can't immediately pass but can proceed to fund checking
-            match funds {
-                x if x.is_empty() => {
-                    return Ok((
-                        CanSpendResponse {
-                            can_spend: true,
-                            reason: "Authorized action with no funds".to_string(),
-                        },
-                        None,
-                    ));
-                }
-                _ => funds,
-            }
-        }
-        CosmosMsg::Bank(BankMsg::Send {
-            to_address: _,
-            amount,
-        }) => amount,
-        CosmosMsg::Staking(StakingMsg::Delegate {
-            validator: _,
-            amount,
-        }) => {
-            vec![amount]
-        }
-        CosmosMsg::Custom(_) => {
-            return Ok((
-                CanSpendResponse {
-                    can_spend: false,
-                    reason: "Custom CosmosMsg not yet supported".to_string(),
-                },
-                None,
-            ));
-        }
-        CosmosMsg::Distribution(_) => {
-            return Ok((
-                CanSpendResponse {
-                    can_spend: false,
-                    reason: "Distribution CosmosMsg not yet supported".to_string(),
-                },
-                None,
-            ));
-        }
-        _ => {
-            return Ok((
-                CanSpendResponse {
-                    can_spend: false,
-                    reason: "This CosmosMsg type not yet supported".to_string(),
-                },
-                None,
-            ));
-        }
-    };
     let res = cfg.check_spend_limits(
         deps,
         asset_unifier_contract_address,
