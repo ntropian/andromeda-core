@@ -12,7 +12,7 @@ use crate::{
     gatekeeper_common::UniversalMsg,
     gatekeeper_message::AuthorizationsResponse,
     gatekeeper_spendlimit::CanSpendResponse,
-    submsgs::{PendingSubmsg, SubmsgType},
+    submsgs::{PendingSubmsg, SubmsgType, WasmmsgType},
 };
 
 use crate::gatekeeper_spendlimit::QueryMsg as SpendlimitQueryMsg;
@@ -66,6 +66,7 @@ pub enum QueryMsg {
         address: String,
         /// The message to check
         msg: UniversalMsg,
+        funds: Vec<Coin>,
     },
     /// Query the current update delay
     UpdateDelay {},
@@ -165,7 +166,6 @@ impl UserAccount {
         address: String,
         msg: UniversalMsg,
     ) -> Result<CanSpendResponse, ContractError> {
-
         // check for blanket authorizations ("any permissioned address can spend this")
         // usefulness TBD, but good for ensuring some low-value utility or event token
         // is easily and relatively cheaply used.
@@ -173,30 +173,32 @@ impl UserAccount {
         // Note that funds cannot be attached, or this might be a way to circumvent
         // restrictions.
         if let UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: _,
+            contract_addr,
             msg: _,
             funds,
         })) = msg.clone() {
             let empty_funds: Vec<Coin> = vec![];
             if funds == empty_funds {
-                if let UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
-                    contract_addr,
-                    msg: _,
-                    funds: _,
-                })) = msg.clone()
-                {
-                    if self.is_authorized_permissioned_address_contract(contract_addr) {
-                        return Ok(CanSpendResponse {
-                            can_spend: true,
-                            reason: "Active permissioned address spending blanket-authorized token"
-                                .to_string(),
-                        });
-                    }
-                };
+                if self.is_authorized_permissioned_address_contract(contract_addr) {
+                    return Ok(CanSpendResponse {
+                        can_spend: true,
+                        reason: "Active permissioned address spending blanket-authorized token"
+                            .to_string(),
+                    });
+                }
             }
         }
+        println!("Checking if tx uses funds...");
 
-        // check if TX is using funds at all
+        // check if TX is using funds at all. (This way we know whether
+        // to run funds and debt checks)
+        
+        // `spend_limit_authorization_rider` allows certain message types
+        // (specifically BankMsg::Send and WasmMsg::Execute(Cw20Transfer)
+        // to pass message gatekeeper, if applicable, if the permissioned address
+        // has an active spend limit
+        let mut spend_limit_authorization_rider = false;
+        println!("msg: {}", msg.clone());
         let funds: Vec<Coin> = match msg.clone() {
             //strictly speaking cw20 spend limits not supported yet, unless blanket authorized.
             //As kludge, send/transfer is blocked if debt exists. Otherwise, depends on
@@ -216,7 +218,11 @@ impl UserAccount {
                             ty: SubmsgType::Unknown,
                         };
                         processed_msg.add_funds(funds.to_vec());
-                        let _msg_type = processed_msg.process_and_get_msg_type();
+                        let msg_type = processed_msg.process_and_get_msg_type();
+                        match msg_type {
+                            SubmsgType::ExecuteWasm(WasmmsgType::Cw20Transfer) => { spend_limit_authorization_rider = true; },
+                            _ => {}
+                        }
                         // can't immediately pass but can proceed to fund checking
                         match funds {
                             x if x.is_empty() => {
@@ -233,7 +239,10 @@ impl UserAccount {
                     CosmosMsg::Bank(BankMsg::Send {
                         to_address: _,
                         amount,
-                    }) => amount,
+                    }) => {
+                        spend_limit_authorization_rider = true;
+                        amount
+                    },
                     CosmosMsg::Staking(StakingMsg::Delegate {
                         validator: _,
                         amount,
@@ -271,8 +280,11 @@ impl UserAccount {
             } // not at all supported yet
         };
 
+
         let empty_funds: Vec<Coin> = vec![];
         if funds != empty_funds {
+            println!("Yes, this TX uses funds.");
+
             // if so...
             // we must have a spend controller
             // and must be within spend limit
@@ -285,12 +297,15 @@ impl UserAccount {
             // check that debt is repaid: otherwise, attach a debt repay msg
         }
 
+        println!("Check that message is authorized...");
+        println!("Spend limit authorization rider is: {}", spend_limit_authorization_rider);
+
         // We need to have an authorization by message type, except
         // that "spend" authorization comes with implicit inclusion of
         // BankMsg and cw20 Transfer (but not implicit inclusion of Send,
         // which can trigger contracts)
         ensure!(
-            self.message_is_ok(deps, address, msg)?,
+            spend_limit_authorization_rider || self.message_is_ok(deps, address, msg)?,
             ContractError::Unauthorized {}
         );
 

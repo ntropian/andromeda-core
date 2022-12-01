@@ -303,7 +303,6 @@ pub fn can_spend(
         sender,
         funds,
     );
-    println!("res inside can_spend: {:?}", res);
     match res {
         Ok(coin) => Ok((
             CanSpendResponse {

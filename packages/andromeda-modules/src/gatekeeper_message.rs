@@ -6,6 +6,12 @@ use serde::{Deserialize, Serialize};
 use crate::gatekeeper_common::UniversalMsg;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct InstantiateMsg {
+    pub legacy_owner: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Authorization {
     pub identifier: u16,
     pub actor: Option<Addr>,

@@ -463,8 +463,6 @@ pub fn check_msg(
             cosmwasm_std::CosmosMsg::Custom(_) => Ok(todo_auths),
             cosmwasm_std::CosmosMsg::Staking(_) => Ok(todo_auths),
             cosmwasm_std::CosmosMsg::Distribution(_) => Ok(todo_auths),
-            cosmwasm_std::CosmosMsg::Stargate { type_url, value } => Ok(todo_auths),
-            cosmwasm_std::CosmosMsg::Ibc(_) => Ok(todo_auths),
             cosmwasm_std::CosmosMsg::Wasm(msg) => match msg {
                 WasmMsg::Execute {
                     contract_addr,
@@ -502,7 +500,6 @@ pub fn check_msg(
                 WasmMsg::ClearAdmin { contract_addr } => Ok(todo_auths),
                 _ => Ok(todo_auths),
             },
-            cosmwasm_std::CosmosMsg::Gov(_) => Ok(todo_auths),
             _ => Ok(todo_auths),
         },
     }

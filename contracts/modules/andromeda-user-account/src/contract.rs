@@ -13,7 +13,7 @@ use semver::Version;
 
 use andromeda_modules::{
     gatekeeper_common::{update_legacy_owner, LEGACY_OWNER, UniversalMsg},
-    user_account::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, UserAccount, ACCOUNT}, unified_asset::LegacyOwnerResponse,
+    user_account::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, UserAccount, ACCOUNT}, unified_asset::LegacyOwnerResponse, gatekeeper_spendlimit::CanSpendResponse,
 };
 
 // version info for migration info
@@ -84,10 +84,10 @@ pub fn execute(
             let valid_new_owner = deps.api.addr_validate(&new_owner)?;
             update_legacy_owner(deps, info, valid_new_owner)
         }
-        ExecuteMsg::AndrReceive(_) => todo!(),
         ExecuteMsg::ProposeUpdateOwner { new_owner } => todo!(),
         ExecuteMsg::ChangeOwnerUpdatesDelay { new_delay } => todo!(),
         ExecuteMsg::Execute { msg } => todo!(),
+        ExecuteMsg::AndrReceive(_) => todo!(),
     }
 }
 
@@ -96,7 +96,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
     match msg {
         QueryMsg::LegacyOwner {} => to_binary(&query_legacy_owner(deps)?
             ).map_err(|e| ContractError::Std(e)),
-        QueryMsg::CanExecute { address, msg } => to_binary(&can_execute(deps, address, msg)?
+        QueryMsg::CanExecute { address, msg, funds } => to_binary(&can_execute(deps, address, msg)?
             ).map_err(|e| ContractError::Std(e)),
         QueryMsg::UpdateDelay {} => todo!(),
         QueryMsg::GatekeeperContracts {} => todo!(),
@@ -114,8 +114,8 @@ pub fn query_legacy_owner(deps: Deps) -> StdResult<LegacyOwnerResponse> {
     Ok(LegacyOwnerResponse { legacy_owner })
 }
 
-pub fn can_execute(deps: Deps, address: String, msg: UniversalMsg) -> Result<bool, ContractError> {
+pub fn can_execute(deps: Deps, address: String, msg: UniversalMsg) -> Result<CanSpendResponse, ContractError> {
     let account: UserAccount = ACCOUNT.load(deps.storage)?;
     let can_execute = account.can_execute(deps, address, vec![msg])?;
-    Ok(can_execute.can_spend)
+    Ok(can_execute)
 }
