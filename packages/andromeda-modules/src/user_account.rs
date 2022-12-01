@@ -188,7 +188,7 @@ impl UserAccount {
                 }
             }
         }
-        println!("Checking if tx uses funds...");
+        println!("\x1b[3mChecking if tx uses funds...\x1b[0m");
 
         // check if TX is using funds at all. (This way we know whether
         // to run funds and debt checks)
@@ -198,7 +198,7 @@ impl UserAccount {
         // to pass message gatekeeper, if applicable, if the permissioned address
         // has an active spend limit
         let mut spend_limit_authorization_rider = false;
-        println!("msg: {}", msg.clone());
+        println!("\x1b[3mAnalyzing message: {}\x1b[0m", msg.clone());
         let funds: Vec<Coin> = match msg.clone() {
             //strictly speaking cw20 spend limits not supported yet, unless blanket authorized.
             //As kludge, send/transfer is blocked if debt exists. Otherwise, depends on
@@ -283,7 +283,7 @@ impl UserAccount {
 
         let empty_funds: Vec<Coin> = vec![];
         if funds != empty_funds {
-            println!("Yes, this TX uses funds.");
+            println!("\x1b[3mYes, this TX uses funds.\x1b[0m");
 
             // if so...
             // we must have a spend controller
@@ -297,8 +297,8 @@ impl UserAccount {
             // check that debt is repaid: otherwise, attach a debt repay msg
         }
 
-        println!("Check that message is authorized...");
-        println!("Spend limit authorization rider is: {}", spend_limit_authorization_rider);
+        println!("\x1b[3mCheck that message is authorized...\x1b[0m");
+        println!("\x1b[3mSpend limit authorization rider is: {}\x1b[0m", spend_limit_authorization_rider);
 
         // We need to have an authorization by message type, except
         // that "spend" authorization comes with implicit inclusion of
@@ -320,6 +320,7 @@ impl UserAccount {
     ) -> Result<bool, ContractError> {
         if let Some(contract_addr) = self.spendlimit_gatekeeper_contract_addr.clone() {
             let query_msg: SpendlimitQueryMsg = CanSpend { sender, funds };
+            println!("Inter-contract query: User Account querying Spendlimit Gatekeeper");
             let query_response: CanSpendResponse =
                 deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                     contract_addr,
@@ -339,6 +340,7 @@ impl UserAccount {
     ) -> Result<bool, ContractError> {
         if let Some(contract_addr) = self.message_gatekeeper_contract_addr.clone() {
             let query_msg: MessageQueryMsg = CheckTransaction { msg, sender };
+            println!("Inter-contract query: Asset Unifer querying Message Gatekeeper");
             let query_response: AuthorizationsResponse =
                 deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                     contract_addr,

@@ -164,7 +164,7 @@ impl State {
         // (i.e. reset time has passed)
         let cached_result: Result<SourcedCoins, CustomError> =
             if this_wallet.should_reset_active(current_time) {
-                println!("Recurring spend limit resets.");
+                println!("\x1b[3mRecurring spend limit resets.\x1b[0m");
                 this_wallet
                     .check_spend_vec(
                         deps,
@@ -175,7 +175,7 @@ impl State {
                     )
                     .map_err(|e| CustomError::CustomError { val: e.to_string() })
             } else {
-                println!("Recurring spend limit does not reset.");
+                println!("\x1b[3mRecurring spend limit does not reset.\x1b[0m");
                 this_wallet
                     .check_spend_vec(
                         deps,
@@ -190,7 +190,7 @@ impl State {
         match cached_result {
             Err(e) => {
                 if this_wallet.should_reset_beneficiary(current_time) {
-                    println!("Beneficiary spend limit resets.");
+                    println!("\x1b[3mBeneficiary spend limit resets.\x1b[0m");
                     if let Ok(coin) = this_wallet.check_spend_vec(
                         deps,
                         asset_unifier_contract_address,
@@ -207,7 +207,7 @@ impl State {
                     false,
                     false,
                 ) {
-                    println!("Beneficiary spend limit does not reset.");
+                    println!("\x1b[3mBeneficiary spend limit does not reset.\x1b[0m");
                     return Ok(coin);
                 }
                 Err(e)

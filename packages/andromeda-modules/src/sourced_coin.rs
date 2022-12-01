@@ -89,6 +89,7 @@ impl SourcedCoins {
             });
             return converted_res;
         }
+        println!("Inter-contract query: Spendlimit Gatekeeper querying Asset Unifier");
         let query_response: UnifiedAssetsResponse =
             deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                 contract_addr: asset_unifier_contract_address,

@@ -176,6 +176,7 @@ impl PairContract {
         T: for<'de> Deserialize<'de>,
         T: Tally,
     {
+        println!("Inter-contract query: Asset Unifer querying Dex Contract");
         let query_response: Result<T, StdError> =
             deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                 contract_addr: self.contract_addr.clone(),
