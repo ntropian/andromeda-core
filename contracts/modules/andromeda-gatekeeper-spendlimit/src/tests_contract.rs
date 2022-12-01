@@ -12,15 +12,14 @@ mod tests {
     use crate::ContractError;
     use andromeda_modules::gatekeeper_common::is_legacy_owner;
     use andromeda_modules::gatekeeper_spendlimit::{
-        CanSpendResponse, Cw20ExecuteMsg, ExecuteMsg, QueryMsg,
+        CanSpendResponse, ExecuteMsg, QueryMsg,
     };
     use andromeda_modules::permissioned_address::PeriodType;
     use andromeda_modules::unified_asset::LegacyOwnerResponse;
 
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{
-        coin, coins, from_binary, to_binary, Api, BankMsg, Coin, CosmosMsg, DistributionMsg,
-        StakingMsg, Uint128, WasmMsg,
+        coin, coins, from_binary, Api,
     };
 
     const ANYONE: &str = "anyone";

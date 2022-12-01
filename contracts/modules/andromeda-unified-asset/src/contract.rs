@@ -148,7 +148,7 @@ pub fn unify_assets(
     assets: Vec<Coin>,
     assets_are_target_amount: bool,
 ) -> Result<UnifiedAssetsResponse, ContractError> {
-    let pair_contracts = STATE.load(deps.storage)?.pair_contracts;
+    let _pair_contracts = STATE.load(deps.storage)?.pair_contracts;
     let mut return_coin = SourcedCoin {
         coin: Coin {
             denom: target_asset,

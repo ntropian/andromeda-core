@@ -42,7 +42,7 @@ fn gatekeeper_spendlimit_contract() -> Box<dyn Contract<Empty>> {
 }
 
 pub fn asset_unifier_instantiate_msg(
-    legacy_owner: Option<String>,
+    _legacy_owner: Option<String>,
     price_contract: String,
 ) -> andromeda_modules::unified_asset::InstantiateMsg {
     andromeda_modules::unified_asset::InstantiateMsg {
@@ -203,7 +203,7 @@ fn spendlimit_gatekeeper_multi_test() {
         };
     let _ = router
         .execute_contract(
-            legacy_owner.clone(),
+            legacy_owner,
             gatekeeper_spendlimit_contract_addr.clone(),
             &msg,
             &[],
@@ -291,7 +291,7 @@ fn spendlimit_gatekeeper_multi_test() {
 
     // we can also spend some "ujunox"
     let query_msg = andromeda_modules::gatekeeper_spendlimit::QueryMsg::CanSpend {
-        sender: authorized_spender.clone(),
+        sender: authorized_spender,
         funds: vec![Coin {
             denom: "ujunox".to_string(),
             amount: Uint128::from(2_000_000u128),
@@ -299,7 +299,7 @@ fn spendlimit_gatekeeper_multi_test() {
     };
     let can_spend_response: CanSpendResponse = router
         .wrap()
-        .query_wasm_smart(gatekeeper_spendlimit_contract_addr.clone(), &query_msg)
+        .query_wasm_smart(gatekeeper_spendlimit_contract_addr, &query_msg)
         .unwrap();
     assert!(can_spend_response.can_spend);
 }

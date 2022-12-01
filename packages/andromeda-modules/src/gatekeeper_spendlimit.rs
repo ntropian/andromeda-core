@@ -2,7 +2,7 @@ use common::ado_base::AndromedaMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Binary, Coin, CosmosMsg, Uint128};
+use cosmwasm_std::{Binary, Coin, Uint128};
 
 use crate::permissioned_address::{CoinLimit, PermissionedAddressParams};
 
@@ -13,7 +13,7 @@ pub struct InstantiateMsg {
     pub asset_unifier_contract: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     /// Proposes a new owner for the proxy contract – must be called by the existing owner

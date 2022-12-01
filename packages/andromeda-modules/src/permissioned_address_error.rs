@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum ContractError {
     #[error("This address is already authorized as a Permissioned Address. Remove it first in order to update it.")]
     PermissionedAddressExists {},

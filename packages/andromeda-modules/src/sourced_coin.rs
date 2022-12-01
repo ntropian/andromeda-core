@@ -44,7 +44,7 @@ impl SourcedCoins {
         asset_unifier_contract_address: String,
         amount_is_target: bool,
     ) -> Result<UnifiedAssetsResponse, ContractError> {
-        if self.coins.len() == 1 && self.coins[0].denom == JUNO_MAINNET_AXLUSDC_IBC.to_string() {
+        if self.coins.len() == 1 && self.coins[0].denom == *JUNO_MAINNET_AXLUSDC_IBC {
             return Ok(UnifiedAssetsResponse {
                 unified_asset: Coin {
                     denom: JUNO_MAINNET_AXLUSDC_IBC.to_string(),

@@ -3,8 +3,8 @@ use common::error::ContractError;
 use cosmwasm_std::ensure;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{
-    entry_point, to_binary, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response, StdError,
-    StdResult, Uint128,
+    entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError,
+    StdResult,
 };
 
 use cw2::{get_contract_version, set_contract_version};
@@ -30,7 +30,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    let mut account = msg.account;
+    let account = msg.account;
     ACCOUNT.save(deps.storage, &account)?;
     Ok(Response::default())
 }
@@ -86,9 +86,9 @@ pub fn execute(
             let valid_new_owner = deps.api.addr_validate(&new_owner)?;
             update_legacy_owner(deps, info, valid_new_owner)
         }
-        ExecuteMsg::ProposeUpdateOwner { new_owner } => todo!(),
-        ExecuteMsg::ChangeOwnerUpdatesDelay { new_delay } => todo!(),
-        ExecuteMsg::Execute { msg } => todo!(),
+        ExecuteMsg::ProposeUpdateOwner { new_owner: _ } => todo!(),
+        ExecuteMsg::ChangeOwnerUpdatesDelay { new_delay: _ } => todo!(),
+        ExecuteMsg::Execute { msg: _ } => todo!(),
         ExecuteMsg::AndrReceive(_) => todo!(),
     }
 }
@@ -97,13 +97,13 @@ pub fn execute(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::LegacyOwner {} => {
-            to_binary(&query_legacy_owner(deps)?).map_err(|e| ContractError::Std(e))
+            to_binary(&query_legacy_owner(deps)?).map_err(ContractError::Std)
         }
         QueryMsg::CanExecute {
             address,
             msg,
-            funds,
-        } => to_binary(&can_execute(deps, address, msg)?).map_err(|e| ContractError::Std(e)),
+            funds: _,
+        } => to_binary(&can_execute(deps, address, msg)?).map_err(ContractError::Std),
         QueryMsg::UpdateDelay {} => todo!(),
         QueryMsg::GatekeeperContracts {} => todo!(),
         QueryMsg::AndrHook(_) => todo!(),

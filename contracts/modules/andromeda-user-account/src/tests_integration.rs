@@ -122,15 +122,15 @@ pub fn use_contract(addy: Addr, contracts: ContractAddresses, ty: String) -> Add
         _ => "Unknown contract".to_string(),
     };
     match ty {
-        val if val == String::from("Execute") => {
+        val if val == *"Execute" => {
             println!("Calling contract: {}", contract_human_name);
         }
-        val if val == String::from("Query") => {
+        val if val == *"Query" => {
             println!("Querying contract: {}", contract_human_name);
         }
         _ => panic!("bad type, use execute or query"),
     }
-    addy.clone()
+    addy
 }
 
 #[test]
@@ -293,7 +293,7 @@ fn user_account_multi_test() {
         )
         .unwrap_err();
     println!("\x1b[1;32m...success\x1b[0m");
-    println!("");
+    println!();
 
     println!(
         "\x1b[1;33;4m*** Test 2: Add a permissioned user with a $100 daily spend limit ***\x1b[0m"
@@ -327,7 +327,7 @@ fn user_account_multi_test() {
         )
         .unwrap();
     println!("\x1b[1;32m...success\x1b[0m");
-    println!("");
+    println!();
 
     // Query the contract to verify we now have a permissioned address
     let query_msg = andromeda_modules::gatekeeper_spendlimit::QueryMsg::PermissionedAddresss {};
@@ -376,7 +376,7 @@ fn user_account_multi_test() {
         .unwrap();
     assert!(can_spend_response.can_spend);
     println!("\x1b[1;32m...success\x1b[0m");
-    println!("");
+    println!();
 
     // spending it should update the spend limit (not implemented here; called by the account module)
     // so let's manually update
@@ -394,9 +394,9 @@ fn user_account_multi_test() {
         };
     let _ = router
         .execute_contract(
-            legacy_owner.clone(),
+            legacy_owner,
             use_contract(
-                gatekeeper_spendlimit_contract_addr.clone(),
+                gatekeeper_spendlimit_contract_addr,
                 contract_addresses.clone(),
                 "Execute".to_string(),
             ),
@@ -405,7 +405,7 @@ fn user_account_multi_test() {
         )
         .unwrap();
     println!("\x1b[1;32m...success\x1b[0m");
-    println!("");
+    println!();
 
     // now we should NOT be able to spend even $2
     println!("\x1b[1;33;4m*** Test 5: Try (and fail) to send $2 ***\x1b[0m");
@@ -432,11 +432,11 @@ fn user_account_multi_test() {
             ),
             &query_msg,
         )
-        .map_err(|e| ContractError::Std(e));
+        .map_err(ContractError::Std);
     can_spend_response.unwrap_err();
     // note that the above errors instead of returning false. Maybe a todo
     println!("\x1b[1;32m...failed as expected\x1b[0m");
-    println!("");
+    println!();
 
     // nor can we spend 2 "ujunox"
     println!("\x1b[1;33;4m*** Test 6: Try (and fail) to send 2 Juno (valued by dummy dex at $4.56 each) ***\x1b[0m");
@@ -463,10 +463,10 @@ fn user_account_multi_test() {
             ),
             &query_msg,
         )
-        .map_err(|e| ContractError::Std(e));
+        .map_err(ContractError::Std);
     can_spend_response.unwrap_err();
     println!("\x1b[1;32m...failed as expected\x1b[0m");
-    println!("");
+    println!();
 
     // but we can spend $1
     println!("\x1b[1;33;4m*** Test 7: Check we can spend $1 ***\x1b[0m");
@@ -496,7 +496,7 @@ fn user_account_multi_test() {
         .unwrap();
     assert!(can_spend_response.can_spend);
     println!("\x1b[1;32m...success\x1b[0m");
-    println!("");
+    println!();
 
     // or 0.1 JUNO
     println!("\x1b[1;33;4m*** Test 8: Check we can spend 0.1 Juno ($0.45) ***\x1b[0m");
@@ -526,7 +526,7 @@ fn user_account_multi_test() {
         .unwrap();
     assert!(can_spend_response.can_spend);
     println!("\x1b[1;32m...success\x1b[0m");
-    println!("");
+    println!();
 
     println!("\x1b[1;33;4m*** Test 9: Go forward 1 day, and now we can spend $2 since limit has reset ***\x1b[0m");
     let old_block_info = router.block_info();
@@ -563,11 +563,11 @@ fn user_account_multi_test() {
         .unwrap();
     assert!(can_spend_response.can_spend);
     println!("\x1b[1;32m...success\x1b[0m");
-    println!("");
+    println!();
 
     println!("\x1b[1;33;4m*** Test 10: We can spend 2 Juno now as well ***\x1b[0m");
     let query_msg = andromeda_modules::user_account::QueryMsg::CanExecute {
-        address: authorized_spender.clone(),
+        address: authorized_spender,
         msg: {
             UniversalMsg::Legacy(CosmosMsg::Bank(BankMsg::Send {
                 to_address: "bob".to_string(),
@@ -583,8 +583,8 @@ fn user_account_multi_test() {
         .wrap()
         .query_wasm_smart(
             use_contract(
-                user_account_contract_addr.clone(),
-                contract_addresses.clone(),
+                user_account_contract_addr,
+                contract_addresses,
                 "Query".to_string(),
             ),
             &query_msg,
@@ -592,5 +592,5 @@ fn user_account_multi_test() {
         .unwrap();
     assert!(can_spend_response.can_spend);
     println!("\x1b[1;32m...success\x1b[0m");
-    println!("");
+    println!();
 }

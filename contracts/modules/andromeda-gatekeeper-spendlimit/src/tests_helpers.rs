@@ -1,6 +1,6 @@
 use andromeda_modules::gatekeeper_spendlimit::{CanSpendResponse, ExecuteMsg, InstantiateMsg};
 use andromeda_modules::permissioned_address::{CoinLimit, PeriodType, PermissionedAddressParams};
-use cosmwasm_std::{BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{Coin, DepsMut, Env, MessageInfo, Response};
 
 use crate::contract::{can_spend, execute, query_permissioned_addresses};
 use crate::error::ContractError;
@@ -70,7 +70,7 @@ pub fn add_test_permissioned_address(
 pub fn test_spend_bank(
     deps: DepsMut,
     current_env: Env,
-    to_address: String,
+    _to_address: String,
     amount: Vec<Coin>,
     info: MessageInfo,
 ) -> Result<CanSpendResponse, ContractError> {

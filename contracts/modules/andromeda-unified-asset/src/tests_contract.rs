@@ -4,7 +4,7 @@ pub const LEGACY_OWNER: &str = "alice";
 mod tests {
     use super::*;
     use crate::contract::{instantiate, query, query_legacy_owner};
-    use crate::sourced_coin::SourcedCoin;
+    
     use crate::tests_helpers::get_test_instantiate_message;
 
     use andromeda_modules::unified_asset::{

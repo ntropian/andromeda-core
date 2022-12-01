@@ -138,8 +138,8 @@ impl UserAccount {
 
     pub fn can_owner_execute(
         &self,
-        deps: Deps,
-        msg: UniversalMsg,
+        _deps: Deps,
+        _msg: UniversalMsg,
     ) -> Result<CanSpendResponse, ContractError> {
         // check debt (once done)
         // check delay
@@ -181,14 +181,12 @@ impl UserAccount {
         })) = msg.clone()
         {
             let empty_funds: Vec<Coin> = vec![];
-            if funds == empty_funds {
-                if self.is_authorized_permissioned_address_contract(contract_addr) {
-                    return Ok(CanSpendResponse {
-                        can_spend: true,
-                        reason: "Active permissioned address spending blanket-authorized token"
-                            .to_string(),
-                    });
-                }
+            if funds == empty_funds && self.is_authorized_permissioned_address_contract(contract_addr) {
+                return Ok(CanSpendResponse {
+                    can_spend: true,
+                    reason: "Active permissioned address spending blanket-authorized token"
+                        .to_string(),
+                });
             }
         }
         println!("\x1b[3mChecking if tx uses funds...\x1b[0m");
@@ -201,7 +199,7 @@ impl UserAccount {
         // to pass message gatekeeper, if applicable, if the permissioned address
         // has an active spend limit
         let mut spend_limit_authorization_rider = false;
-        println!("\x1b[3mAnalyzing message: {}\x1b[0m", msg.clone());
+        println!("\x1b[3mAnalyzing message: {}\x1b[0m", msg);
         let funds: Vec<Coin> = match msg.clone() {
             //strictly speaking cw20 spend limits not supported yet, unless blanket authorized.
             //As kludge, send/transfer is blocked if debt exists. Otherwise, depends on
@@ -214,7 +212,7 @@ impl UserAccount {
                         funds,
                     }) => {
                         let mut processed_msg = PendingSubmsg {
-                            msg: cosmos_msg.clone(),
+                            msg: cosmos_msg,
                             contract_addr: None,
                             binarymsg: None,
                             funds: vec![],
@@ -222,11 +220,8 @@ impl UserAccount {
                         };
                         processed_msg.add_funds(funds.to_vec());
                         let msg_type = processed_msg.process_and_get_msg_type();
-                        match msg_type {
-                            SubmsgType::ExecuteWasm(WasmmsgType::Cw20Transfer) => {
-                                spend_limit_authorization_rider = true;
-                            }
-                            _ => {}
+                        if let SubmsgType::ExecuteWasm(WasmmsgType::Cw20Transfer) = msg_type {
+                            spend_limit_authorization_rider = true;
                         }
                         // can't immediately pass but can proceed to fund checking
                         match funds {

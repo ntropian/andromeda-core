@@ -9,8 +9,8 @@ use andromeda_modules::unified_asset::LegacyOwnerResponse;
 use cosmwasm_std::{ensure, Api};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{
-    entry_point, to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env,
-    MessageInfo, Response, StakingMsg, StdError, StdResult, WasmMsg,
+    entry_point, to_binary, Addr, BankMsg, Binary, Coin, Deps, DepsMut, Env,
+    MessageInfo, Response, StdError, StdResult,
 };
 
 use crate::error::ContractError as CustomError;
@@ -25,9 +25,6 @@ use semver::Version;
 // version info for migration info
 const CONTRACT_NAME: &str = "obi-proxy-contract";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-
-// temporary
-const ASSET_UNIFIER_CONTRACT_ADDRESS: &str = "LOCAL_TEST";
 
 pub struct SourcedRepayMsg {
     pub repay_msg: Option<BankMsg>,
