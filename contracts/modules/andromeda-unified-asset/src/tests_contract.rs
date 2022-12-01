@@ -7,7 +7,9 @@ mod tests {
     use crate::sourced_coin::SourcedCoin;
     use crate::tests_helpers::get_test_instantiate_message;
 
-    use andromeda_modules::unified_asset::{LegacyOwnerResponse, QueryMsg, UnifyAssetsMsg};
+    use andromeda_modules::unified_asset::{
+        LegacyOwnerResponse, QueryMsg, UnifiedAssetsResponse, UnifyAssetsMsg,
+    };
 
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{coin, from_binary, Coin, Uint128};
@@ -74,9 +76,9 @@ mod tests {
         });
 
         let res = query(deps.as_ref(), mock_env(), query_msg).unwrap();
-        let res_value: SourcedCoin = from_binary(&res).unwrap();
+        let res_value: UnifiedAssetsResponse = from_binary(&res).unwrap();
         assert_eq!(
-            res_value.coin,
+            res_value.unified_asset,
             Coin {
                 amount: Uint128::from(1_010_000u128),
                 denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"

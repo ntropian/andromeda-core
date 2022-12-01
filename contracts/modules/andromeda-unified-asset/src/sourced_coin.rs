@@ -3,11 +3,11 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::pair_contract::PairContracts;
-use andromeda_modules::sources::Sources;
 use crate::{
     constants::{get_usdc_sourced_coin, MAINNET_AXLUSDC_IBC},
     ContractError,
 };
+use andromeda_modules::sources::Sources;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct SourcedCoin {

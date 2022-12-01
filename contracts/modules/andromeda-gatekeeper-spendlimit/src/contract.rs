@@ -98,17 +98,21 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<Response, CustomError> {
+) -> Result<Response, ContractError> {
+    // temporarily mapping these errors over
     match msg {
         ExecuteMsg::UpsertBeneficiary { new_beneficiary } => {
             upsert_permissioned_address(deps, env, info, new_beneficiary, true)
+                .map_err(|e| ContractError::Std(StdError::GenericErr { msg: e.to_string() }))
         }
         ExecuteMsg::UpsertPermissionedAddress {
             new_permissioned_address,
-        } => upsert_permissioned_address(deps, env, info, new_permissioned_address, false),
+        } => upsert_permissioned_address(deps, env, info, new_permissioned_address, false)
+            .map_err(|e| ContractError::Std(StdError::GenericErr { msg: e.to_string() })),
         ExecuteMsg::RmPermissionedAddress {
             doomed_permissioned_address,
-        } => rm_permissioned_address(deps, env, info, doomed_permissioned_address),
+        } => rm_permissioned_address(deps, env, info, doomed_permissioned_address)
+            .map_err(|e| ContractError::Std(StdError::GenericErr { msg: e.to_string() })),
         ExecuteMsg::UpdatePermissionedAddressSpendLimit {
             permissioned_address,
             new_spend_limits,
@@ -120,11 +124,14 @@ pub fn execute(
             permissioned_address,
             new_spend_limits,
             is_beneficiary,
-        ),
+        )
+        .map_err(|e| ContractError::Std(StdError::GenericErr { msg: e.to_string() })),
         ExecuteMsg::UpdateLegacyOwner { new_owner } => {
             let valid_new_owner = deps.api.addr_validate(&new_owner)?;
             update_legacy_owner(deps, info, valid_new_owner)
-                .map_err(|e| CustomError::CustomError { val: e.to_string() })
+        }
+        ExecuteMsg::AndrReceive(msg) => {
+            ADOContract::default().execute(deps, env, info, msg, execute)
         }
     }
 }
@@ -138,12 +145,12 @@ pub fn upsert_permissioned_address(
 ) -> Result<Response, CustomError> {
     let mut cfg = STATE.load(deps.storage)?;
     ensure!(
-        is_legacy_owner(deps.as_ref(), info.sender.clone())? ||
-        ADOContract::default()
-            .is_owner_or_operator(deps.storage, info.sender.as_str())
-            .map_err(|e| CustomError::CustomError {
-                val: format!("ADO error, loc 1: {}", e)
-            })?,
+        is_legacy_owner(deps.as_ref(), info.sender.clone())?
+            || ADOContract::default()
+                .is_owner_or_operator(deps.storage, info.sender.as_str())
+                .map_err(|e| CustomError::CustomError {
+                    val: format!("ADO error, loc 1: {}", e)
+                })?,
         CustomError::Unauthorized {}
     );
     if cfg
@@ -170,11 +177,12 @@ pub fn rm_permissioned_address(
 ) -> Result<Response, CustomError> {
     let mut cfg = STATE.load(deps.storage)?;
     ensure!(
-        is_legacy_owner(deps.as_ref(), info.sender.clone())? || ADOContract::default()
-            .is_owner_or_operator(deps.storage, info.sender.as_str())
-            .map_err(|e| CustomError::CustomError {
-                val: format!("ADO error, loc 2: {}", e)
-            })?,
+        is_legacy_owner(deps.as_ref(), info.sender.clone())?
+            || ADOContract::default()
+                .is_owner_or_operator(deps.storage, info.sender.as_str())
+                .map_err(|e| CustomError::CustomError {
+                    val: format!("ADO error, loc 2: {}", e)
+                })?,
         CustomError::Unauthorized {}
     );
     if !cfg
@@ -201,11 +209,11 @@ pub fn update_permissioned_address_spend_limit(
     let mut cfg = STATE.load(deps.storage)?;
     ensure!(
         is_legacy_owner(deps.as_ref(), info.sender.clone())?
-        || ADOContract::default()
-            .is_owner_or_operator(deps.storage, info.sender.as_str())
-            .map_err(|e| CustomError::CustomError {
-                val: format!("ADO error, loc 3: {}", e)
-            })?,
+            || ADOContract::default()
+                .is_owner_or_operator(deps.storage, info.sender.as_str())
+                .map_err(|e| CustomError::CustomError {
+                    val: format!("ADO error, loc 3: {}", e)
+                })?,
         CustomError::Unauthorized {}
     );
     let wallet = cfg
@@ -223,10 +231,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, CustomError>
     match msg {
         QueryMsg::PermissionedAddresss {} => to_binary(&query_permissioned_addresses(deps)?)
             .map_err(|e| CustomError::CustomError { val: e.to_string() }),
-        QueryMsg::CanSpend {
-            sender,
-            funds,
-        } => to_binary(&query_can_spend(
+        QueryMsg::CanSpend { sender, funds } => to_binary(&query_can_spend(
             deps,
             env,
             sender,
@@ -262,14 +267,7 @@ pub fn query_can_spend(
     funds: Vec<Coin>,
     asset_unifier_contract_address: String,
 ) -> Result<CanSpendResponse, CustomError> {
-    Ok(can_spend(
-        deps,
-        env,
-        sender,
-        funds,
-        asset_unifier_contract_address,
-    )?
-    .0)
+    Ok(can_spend(deps, env, sender, funds, asset_unifier_contract_address)?.0)
 }
 
 pub fn check_owner(deps: Deps, sender: String) -> bool {

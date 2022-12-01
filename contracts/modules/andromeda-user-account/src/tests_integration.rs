@@ -1,11 +1,12 @@
 use andromeda_gatekeeper_spendlimit::constants::JUNO_MAINNET_AXLUSDC_IBC;
 use andromeda_modules::{
+    gatekeeper_common::UniversalMsg,
     gatekeeper_spendlimit::CanSpendResponse,
     permissioned_address::{PeriodType, PermissionedAddressParams, PermissionedAddresssResponse},
-    user_account::UserAccount, gatekeeper_common::UniversalMsg,
+    user_account::UserAccount,
 };
 use common::error::ContractError;
-use cosmwasm_std::{Addr, BlockInfo, Coin, Empty, Timestamp, Uint128, CosmosMsg, BankMsg};
+use cosmwasm_std::{Addr, BankMsg, BlockInfo, Coin, CosmosMsg, Empty, Timestamp, Uint128};
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
 use dummy_price_contract::msg::AssetPrice;
 
@@ -110,40 +111,24 @@ pub struct ContractAddresses {
 
 pub fn use_contract(addy: Addr, contracts: ContractAddresses, ty: String) -> Addr {
     let contract_human_name = match addy.to_string() {
-        val if val == contracts.spendlimit_gatekeeper => {
-            "Spendlimit Gatekeeper".to_string()
-        },
-        val if val == contracts.message_gatekeeper => {
-            "Message Gatekeeper".to_string()
-        },
-        val if val == contracts.delay_gatekeeper => {
-            "Delay Gatekeeper".to_string()
-        },
-        val if val == contracts.sessionkey_gatekeeper => {
-            "Session Key Gatekeeper".to_string()
-        },
-        val if val == contracts.debt_gatekeeper => {
-            "Debt Gatekeeper".to_string()
-        },
-        val if val == contracts.user_account => {
-            "User Account".to_string()
-        },
-        val if val == contracts.asset_unifier => {
-            "Asset Unifier".to_string()
-        },
-        val if val == contracts.dummy_price => {
-            "Dummy DEX".to_string()
-        },
+        val if val == contracts.spendlimit_gatekeeper => "Spendlimit Gatekeeper".to_string(),
+        val if val == contracts.message_gatekeeper => "Message Gatekeeper".to_string(),
+        val if val == contracts.delay_gatekeeper => "Delay Gatekeeper".to_string(),
+        val if val == contracts.sessionkey_gatekeeper => "Session Key Gatekeeper".to_string(),
+        val if val == contracts.debt_gatekeeper => "Debt Gatekeeper".to_string(),
+        val if val == contracts.user_account => "User Account".to_string(),
+        val if val == contracts.asset_unifier => "Asset Unifier".to_string(),
+        val if val == contracts.dummy_price => "Dummy DEX".to_string(),
         _ => "Unknown contract".to_string(),
     };
     match ty {
         val if val == String::from("Execute") => {
             println!("Calling contract: {}", contract_human_name);
-        },
+        }
         val if val == String::from("Query") => {
             println!("Querying contract: {}", contract_human_name);
         }
-        _ => panic!("bad type, use execute or query")
+        _ => panic!("bad type, use execute or query"),
     }
     addy.clone()
 }
@@ -250,25 +235,28 @@ fn user_account_multi_test() {
     let init_msg = andromeda_modules::user_account::InstantiateMsg {
         account: UserAccount {
             legacy_owner: Some(legacy_owner.to_string()),
-            spendlimit_gatekeeper_contract_addr: Some(gatekeeper_spendlimit_contract_addr.to_string()),
+            spendlimit_gatekeeper_contract_addr: Some(
+                gatekeeper_spendlimit_contract_addr.to_string(),
+            ),
             delay_gatekeeper_contract_addr: None,
             message_gatekeeper_contract_addr: Some(gatekeeper_message_contract_addr.to_string()),
             sessionkey_gatekeeper_contract_addr: None,
-            debt_gatekeeper_contract_addr: None },
+            debt_gatekeeper_contract_addr: None,
+        },
         starting_usd_debt: Some(10000u64),
         owner_updates_delay_secs: Some(10u64),
     };
     // Instantiate the user account contract
     let user_account_contract_addr = router
-    .instantiate_contract(
-        user_account_code_id,
-        legacy_owner.clone(),
-        &init_msg,
-        &[],
-        "user_account",
-        None,
-    )
-    .unwrap();
+        .instantiate_contract(
+            user_account_code_id,
+            legacy_owner.clone(),
+            &init_msg,
+            &[],
+            "user_account",
+            None,
+        )
+        .unwrap();
 
     let contract_addresses = ContractAddresses {
         spendlimit_gatekeeper: gatekeeper_spendlimit_contract_addr.to_string(),
@@ -290,12 +278,16 @@ fn user_account_multi_test() {
 
     println!("\x1b[1;33;4m*** Test 1: Non-Owner cannot update legacy owner ***\x1b[0m");
     let update_owner_msg = andromeda_modules::user_account::ExecuteMsg::UpdateLegacyOwner {
-        new_owner: "alice".to_string()
+        new_owner: "alice".to_string(),
     };
     let _ = router
         .execute_contract(
             Addr::unchecked(authorized_spender.clone()),
-            use_contract(user_account_contract_addr.clone(), contract_addresses.clone(), "Execute".to_string()),
+            use_contract(
+                user_account_contract_addr.clone(),
+                contract_addresses.clone(),
+                "Execute".to_string(),
+            ),
             &update_owner_msg,
             &[],
         )
@@ -303,7 +295,9 @@ fn user_account_multi_test() {
     println!("\x1b[1;32m...success\x1b[0m");
     println!("");
 
-    println!("\x1b[1;33;4m*** Test 2: Add a permissioned user with a $100 daily spend limit ***\x1b[0m");
+    println!(
+        "\x1b[1;33;4m*** Test 2: Add a permissioned user with a $100 daily spend limit ***\x1b[0m"
+    );
     // Let's have alice added as a permissioned user
     let msg = andromeda_modules::gatekeeper_spendlimit::ExecuteMsg::UpsertPermissionedAddress {
         new_permissioned_address: PermissionedAddressParams {
@@ -312,8 +306,7 @@ fn user_account_multi_test() {
             period_type: PeriodType::DAYS,
             period_multiple: 1,
             spend_limits: vec![andromeda_modules::permissioned_address::CoinLimit {
-                denom: JUNO_MAINNET_AXLUSDC_IBC
-                    .to_string(),
+                denom: JUNO_MAINNET_AXLUSDC_IBC.to_string(),
                 amount: 100_000_000u64,
                 limit_remaining: 100_000_000u64,
             }],
@@ -324,7 +317,11 @@ fn user_account_multi_test() {
     let _ = router
         .execute_contract(
             legacy_owner.clone(),
-            use_contract(gatekeeper_spendlimit_contract_addr.clone(), contract_addresses.clone(), "Execute".to_string()),
+            use_contract(
+                gatekeeper_spendlimit_contract_addr.clone(),
+                contract_addresses.clone(),
+                "Execute".to_string(),
+            ),
             &msg,
             &[],
         )
@@ -336,7 +333,14 @@ fn user_account_multi_test() {
     let query_msg = andromeda_modules::gatekeeper_spendlimit::QueryMsg::PermissionedAddresss {};
     let permissioned_address_response: PermissionedAddresssResponse = router
         .wrap()
-        .query_wasm_smart(use_contract(gatekeeper_spendlimit_contract_addr.clone(), contract_addresses.clone(), "Query".to_string()), &query_msg)
+        .query_wasm_smart(
+            use_contract(
+                gatekeeper_spendlimit_contract_addr.clone(),
+                contract_addresses.clone(),
+                "Query".to_string(),
+            ),
+            &query_msg,
+        )
         .unwrap();
     assert_eq!(
         permissioned_address_response.permissioned_addresses.len(),
@@ -353,8 +357,7 @@ fn user_account_multi_test() {
         msg: UniversalMsg::Legacy(CosmosMsg::Bank(BankMsg::Send {
             to_address: "bob".to_string(),
             amount: vec![Coin {
-                denom: JUNO_MAINNET_AXLUSDC_IBC
-                    .to_string(),
+                denom: JUNO_MAINNET_AXLUSDC_IBC.to_string(),
                 amount: Uint128::from(99_000_000u128),
             }],
         })),
@@ -362,7 +365,14 @@ fn user_account_multi_test() {
 
     let can_spend_response: CanSpendResponse = router
         .wrap()
-        .query_wasm_smart(use_contract(user_account_contract_addr.clone(), contract_addresses.clone(), "Query".to_string()), &query_msg)
+        .query_wasm_smart(
+            use_contract(
+                user_account_contract_addr.clone(),
+                contract_addresses.clone(),
+                "Query".to_string(),
+            ),
+            &query_msg,
+        )
         .unwrap();
     assert!(can_spend_response.can_spend);
     println!("\x1b[1;32m...success\x1b[0m");
@@ -376,8 +386,7 @@ fn user_account_multi_test() {
         andromeda_modules::gatekeeper_spendlimit::ExecuteMsg::UpdatePermissionedAddressSpendLimit {
             permissioned_address: authorized_spender.clone(),
             new_spend_limits: andromeda_modules::permissioned_address::CoinLimit {
-                denom: JUNO_MAINNET_AXLUSDC_IBC
-                    .to_string(),
+                denom: JUNO_MAINNET_AXLUSDC_IBC.to_string(),
                 amount: 100_000_000u64,
                 limit_remaining: 1_000_000u64,
             },
@@ -386,7 +395,11 @@ fn user_account_multi_test() {
     let _ = router
         .execute_contract(
             legacy_owner.clone(),
-            use_contract(gatekeeper_spendlimit_contract_addr.clone(), contract_addresses.clone(), "Execute".to_string()),
+            use_contract(
+                gatekeeper_spendlimit_contract_addr.clone(),
+                contract_addresses.clone(),
+                "Execute".to_string(),
+            ),
             &msg,
             &[],
         )
@@ -402,17 +415,23 @@ fn user_account_multi_test() {
             UniversalMsg::Legacy(CosmosMsg::Bank(BankMsg::Send {
                 to_address: "bob".to_string(),
                 amount: vec![Coin {
-                    denom: JUNO_MAINNET_AXLUSDC_IBC
-                        .to_string(),
+                    denom: JUNO_MAINNET_AXLUSDC_IBC.to_string(),
                     amount: Uint128::from(2_000_000u128),
                 }],
             }))
         },
-        funds: vec![]
+        funds: vec![],
     };
     let can_spend_response: Result<CanSpendResponse, ContractError> = router
         .wrap()
-        .query_wasm_smart(use_contract(user_account_contract_addr.clone(), contract_addresses.clone(), "Query".to_string()), &query_msg)
+        .query_wasm_smart(
+            use_contract(
+                user_account_contract_addr.clone(),
+                contract_addresses.clone(),
+                "Query".to_string(),
+            ),
+            &query_msg,
+        )
         .map_err(|e| ContractError::Std(e));
     can_spend_response.unwrap_err();
     // note that the above errors instead of returning false. Maybe a todo
@@ -432,11 +451,18 @@ fn user_account_multi_test() {
                 }],
             }))
         },
-        funds: vec![]
+        funds: vec![],
     };
     let can_spend_response: Result<CanSpendResponse, ContractError> = router
         .wrap()
-        .query_wasm_smart(use_contract(user_account_contract_addr.clone(), contract_addresses.clone(), "Query".to_string()), &query_msg)
+        .query_wasm_smart(
+            use_contract(
+                user_account_contract_addr.clone(),
+                contract_addresses.clone(),
+                "Query".to_string(),
+            ),
+            &query_msg,
+        )
         .map_err(|e| ContractError::Std(e));
     can_spend_response.unwrap_err();
     println!("\x1b[1;32m...failed as expected\x1b[0m");
@@ -450,8 +476,7 @@ fn user_account_multi_test() {
             UniversalMsg::Legacy(CosmosMsg::Bank(BankMsg::Send {
                 to_address: "bob".to_string(),
                 amount: vec![Coin {
-                    denom: JUNO_MAINNET_AXLUSDC_IBC
-                        .to_string(),
+                    denom: JUNO_MAINNET_AXLUSDC_IBC.to_string(),
                     amount: Uint128::from(1_000_000u128),
                 }],
             }))
@@ -460,7 +485,14 @@ fn user_account_multi_test() {
     };
     let can_spend_response: CanSpendResponse = router
         .wrap()
-        .query_wasm_smart(use_contract(user_account_contract_addr.clone(), contract_addresses.clone(), "Query".to_string()), &query_msg)
+        .query_wasm_smart(
+            use_contract(
+                user_account_contract_addr.clone(),
+                contract_addresses.clone(),
+                "Query".to_string(),
+            ),
+            &query_msg,
+        )
         .unwrap();
     assert!(can_spend_response.can_spend);
     println!("\x1b[1;32m...success\x1b[0m");
@@ -483,12 +515,18 @@ fn user_account_multi_test() {
     };
     let can_spend_response: CanSpendResponse = router
         .wrap()
-        .query_wasm_smart(use_contract(user_account_contract_addr.clone(), contract_addresses.clone(), "Query".to_string()), &query_msg)
+        .query_wasm_smart(
+            use_contract(
+                user_account_contract_addr.clone(),
+                contract_addresses.clone(),
+                "Query".to_string(),
+            ),
+            &query_msg,
+        )
         .unwrap();
     assert!(can_spend_response.can_spend);
     println!("\x1b[1;32m...success\x1b[0m");
     println!("");
-    
 
     println!("\x1b[1;33;4m*** Test 9: Go forward 1 day, and now we can spend $2 since limit has reset ***\x1b[0m");
     let old_block_info = router.block_info();
@@ -505,8 +543,7 @@ fn user_account_multi_test() {
             UniversalMsg::Legacy(CosmosMsg::Bank(BankMsg::Send {
                 to_address: "bob".to_string(),
                 amount: vec![Coin {
-                    denom: JUNO_MAINNET_AXLUSDC_IBC
-                        .to_string(),
+                    denom: JUNO_MAINNET_AXLUSDC_IBC.to_string(),
                     amount: Uint128::from(2_000_000u128),
                 }],
             }))
@@ -515,7 +552,14 @@ fn user_account_multi_test() {
     };
     let can_spend_response: CanSpendResponse = router
         .wrap()
-        .query_wasm_smart(use_contract(user_account_contract_addr.clone(), contract_addresses.clone(), "Query".to_string()), &query_msg)
+        .query_wasm_smart(
+            use_contract(
+                user_account_contract_addr.clone(),
+                contract_addresses.clone(),
+                "Query".to_string(),
+            ),
+            &query_msg,
+        )
         .unwrap();
     assert!(can_spend_response.can_spend);
     println!("\x1b[1;32m...success\x1b[0m");
@@ -537,10 +581,16 @@ fn user_account_multi_test() {
     };
     let can_spend_response: CanSpendResponse = router
         .wrap()
-        .query_wasm_smart(use_contract(user_account_contract_addr.clone(), contract_addresses.clone(), "Query".to_string()), &query_msg)
+        .query_wasm_smart(
+            use_contract(
+                user_account_contract_addr.clone(),
+                contract_addresses.clone(),
+                "Query".to_string(),
+            ),
+            &query_msg,
+        )
         .unwrap();
     assert!(can_spend_response.can_spend);
     println!("\x1b[1;32m...success\x1b[0m");
     println!("");
-
 }

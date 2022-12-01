@@ -7,7 +7,8 @@ use crate::tests_constants::get_test_sourced_coin;
 use crate::{
     constants::{MAINNET_ID, TESTNET_ID},
     pair_contract_defaults::{
-        get_local_pair_contracts, get_mainnet_pair_contracts, get_testnet_pair_contracts, get_custom_unified_pair_contracts,
+        get_custom_unified_pair_contracts, get_local_pair_contracts, get_mainnet_pair_contracts,
+        get_testnet_pair_contracts,
     },
     simulation::{DexQueryMsg, Token1ForToken2PriceResponse, Token2ForToken1PriceResponse},
     simulation::{DexQueryMsgFormatted, DexQueryMsgType, FormatQueryMsg, Tally},
@@ -59,35 +60,37 @@ impl PairContracts {
         ))
     }
 
-    pub fn set_pair_contracts(&mut self, network: String, unified_override: Option<String>) -> Result<(), StdError> {
+    pub fn set_pair_contracts(
+        &mut self,
+        network: String,
+        unified_override: Option<String>,
+    ) -> Result<(), StdError> {
         match unified_override {
             Some(contract) => {
                 self.pair_contracts = get_custom_unified_pair_contracts(contract).to_vec();
                 Ok(())
-            },
-            None => {
-                match network {
-                    val if val == MAINNET_ID => {
-                        self.pair_contracts = get_mainnet_pair_contracts().to_vec();
-                        Ok(())
-                    }
-                    val if val == TESTNET_ID => {
-                        self.pair_contracts = get_testnet_pair_contracts().to_vec();
-                        Ok(())
-                    }
-                    val if val == *"local" => {
-                        self.pair_contracts = get_local_pair_contracts().to_vec();
-                        Ok(())
-                    }
-                    val if val == *"EMPTY" => {
-                        self.pair_contracts = [].to_vec();
-                        Ok(())
-                    }
-                    _ => Err(StdError::GenericErr {
-                        msg: "Failed to init pair contracts; unsupported chain id".to_string(),
-                    }),
-                }
             }
+            None => match network {
+                val if val == MAINNET_ID => {
+                    self.pair_contracts = get_mainnet_pair_contracts().to_vec();
+                    Ok(())
+                }
+                val if val == TESTNET_ID => {
+                    self.pair_contracts = get_testnet_pair_contracts().to_vec();
+                    Ok(())
+                }
+                val if val == *"local" => {
+                    self.pair_contracts = get_local_pair_contracts().to_vec();
+                    Ok(())
+                }
+                val if val == *"EMPTY" => {
+                    self.pair_contracts = [].to_vec();
+                    Ok(())
+                }
+                _ => Err(StdError::GenericErr {
+                    msg: "Failed to init pair contracts; unsupported chain id".to_string(),
+                }),
+            },
         }
     }
 }

@@ -3,7 +3,9 @@ use common::{
     ado_base::{hooks::AndromedaHook, AndromedaMsg, AndromedaQuery},
     error::ContractError,
 };
-use cosmwasm_std::{to_binary, Coin, CosmosMsg, Deps, QueryRequest, WasmMsg, WasmQuery, BankMsg, StakingMsg, ensure};
+use cosmwasm_std::{
+    ensure, to_binary, BankMsg, Coin, CosmosMsg, Deps, QueryRequest, StakingMsg, WasmMsg, WasmQuery,
+};
 use cw_storage_plus::Item;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -130,7 +132,7 @@ impl UserAccount {
         // probably todo: operators can have restrictions here
         {
             return self.can_owner_execute(deps, msgs[0].clone());
-        } 
+        }
         self.can_nonowner_execute(deps, address, msgs[0].clone())
     }
 
@@ -143,7 +145,7 @@ impl UserAccount {
         // check delay
         Ok(CanSpendResponse {
             can_spend: true,
-            reason: "owner checks not implemented yet".to_string()
+            reason: "owner checks not implemented yet".to_string(),
         })
     }
 
@@ -176,7 +178,8 @@ impl UserAccount {
             contract_addr,
             msg: _,
             funds,
-        })) = msg.clone() {
+        })) = msg.clone()
+        {
             let empty_funds: Vec<Coin> = vec![];
             if funds == empty_funds {
                 if self.is_authorized_permissioned_address_contract(contract_addr) {
@@ -192,7 +195,7 @@ impl UserAccount {
 
         // check if TX is using funds at all. (This way we know whether
         // to run funds and debt checks)
-        
+
         // `spend_limit_authorization_rider` allows certain message types
         // (specifically BankMsg::Send and WasmMsg::Execute(Cw20Transfer)
         // to pass message gatekeeper, if applicable, if the permissioned address
@@ -220,18 +223,18 @@ impl UserAccount {
                         processed_msg.add_funds(funds.to_vec());
                         let msg_type = processed_msg.process_and_get_msg_type();
                         match msg_type {
-                            SubmsgType::ExecuteWasm(WasmmsgType::Cw20Transfer) => { spend_limit_authorization_rider = true; },
+                            SubmsgType::ExecuteWasm(WasmmsgType::Cw20Transfer) => {
+                                spend_limit_authorization_rider = true;
+                            }
                             _ => {}
                         }
                         // can't immediately pass but can proceed to fund checking
                         match funds {
                             x if x.is_empty() => {
-                                return Ok(
-                                    CanSpendResponse {
-                                        can_spend: true,
-                                        reason: "Authorized action with no funds".to_string(),
-                                    },
-                                );
+                                return Ok(CanSpendResponse {
+                                    can_spend: true,
+                                    reason: "Authorized action with no funds".to_string(),
+                                });
                             }
                             _ => funds,
                         }
@@ -242,7 +245,7 @@ impl UserAccount {
                     }) => {
                         spend_limit_authorization_rider = true;
                         amount
-                    },
+                    }
                     CosmosMsg::Staking(StakingMsg::Delegate {
                         validator: _,
                         amount,
@@ -250,28 +253,22 @@ impl UserAccount {
                         vec![amount]
                     }
                     CosmosMsg::Custom(_) => {
-                        return Ok(
-                            CanSpendResponse {
-                                can_spend: false,
-                                reason: "Custom CosmosMsg not yet supported".to_string(),
-                            },
-                        );
+                        return Ok(CanSpendResponse {
+                            can_spend: false,
+                            reason: "Custom CosmosMsg not yet supported".to_string(),
+                        });
                     }
                     CosmosMsg::Distribution(_) => {
-                        return Ok(
-                            CanSpendResponse {
-                                can_spend: false,
-                                reason: "Distribution CosmosMsg not yet supported".to_string(),
-                            },
-                        );
+                        return Ok(CanSpendResponse {
+                            can_spend: false,
+                            reason: "Distribution CosmosMsg not yet supported".to_string(),
+                        });
                     }
                     _ => {
-                        return Ok(
-                            CanSpendResponse {
-                                can_spend: false,
-                                reason: "This CosmosMsg type not yet supported".to_string(),
-                            },
-                        );
+                        return Ok(CanSpendResponse {
+                            can_spend: false,
+                            reason: "This CosmosMsg type not yet supported".to_string(),
+                        });
                     }
                 }
             }
@@ -279,7 +276,6 @@ impl UserAccount {
                 vec![]
             } // not at all supported yet
         };
-
 
         let empty_funds: Vec<Coin> = vec![];
         if funds != empty_funds {
@@ -290,7 +286,10 @@ impl UserAccount {
             // and must be within spend limit
             ensure!(
                 self.spend_is_ok(deps, address.clone(), funds.clone())?,
-                ContractError::CannotSpendMoreThanLimit(funds[0].amount.to_string(), funds[0].denom.clone())
+                ContractError::CannotSpendMoreThanLimit(
+                    funds[0].amount.to_string(),
+                    funds[0].denom.clone()
+                )
             );
 
             // also...
@@ -298,7 +297,10 @@ impl UserAccount {
         }
 
         println!("\x1b[3mCheck that message is authorized...\x1b[0m");
-        println!("\x1b[3mSpend limit authorization rider is: {}\x1b[0m", spend_limit_authorization_rider);
+        println!(
+            "\x1b[3mSpend limit authorization rider is: {}\x1b[0m",
+            spend_limit_authorization_rider
+        );
 
         // We need to have an authorization by message type, except
         // that "spend" authorization comes with implicit inclusion of
@@ -309,7 +311,10 @@ impl UserAccount {
             ContractError::Unauthorized {}
         );
 
-        Ok(CanSpendResponse { can_spend: true, reason: "all checks passed".to_string() })
+        Ok(CanSpendResponse {
+            can_spend: true,
+            reason: "all checks passed".to_string(),
+        })
     }
 
     pub fn spend_is_ok(

@@ -12,8 +12,10 @@ use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
 
 use andromeda_modules::{
-    gatekeeper_common::{update_legacy_owner, LEGACY_OWNER, UniversalMsg},
-    user_account::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, UserAccount, ACCOUNT}, unified_asset::LegacyOwnerResponse, gatekeeper_spendlimit::CanSpendResponse,
+    gatekeeper_common::{update_legacy_owner, UniversalMsg, LEGACY_OWNER},
+    gatekeeper_spendlimit::CanSpendResponse,
+    unified_asset::LegacyOwnerResponse,
+    user_account::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, UserAccount, ACCOUNT},
 };
 
 // version info for migration info
@@ -94,10 +96,14 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::LegacyOwner {} => to_binary(&query_legacy_owner(deps)?
-            ).map_err(|e| ContractError::Std(e)),
-        QueryMsg::CanExecute { address, msg, funds } => to_binary(&can_execute(deps, address, msg)?
-            ).map_err(|e| ContractError::Std(e)),
+        QueryMsg::LegacyOwner {} => {
+            to_binary(&query_legacy_owner(deps)?).map_err(|e| ContractError::Std(e))
+        }
+        QueryMsg::CanExecute {
+            address,
+            msg,
+            funds,
+        } => to_binary(&can_execute(deps, address, msg)?).map_err(|e| ContractError::Std(e)),
         QueryMsg::UpdateDelay {} => todo!(),
         QueryMsg::GatekeeperContracts {} => todo!(),
         QueryMsg::AndrHook(_) => todo!(),
@@ -114,7 +120,11 @@ pub fn query_legacy_owner(deps: Deps) -> StdResult<LegacyOwnerResponse> {
     Ok(LegacyOwnerResponse { legacy_owner })
 }
 
-pub fn can_execute(deps: Deps, address: String, msg: UniversalMsg) -> Result<CanSpendResponse, ContractError> {
+pub fn can_execute(
+    deps: Deps,
+    address: String,
+    msg: UniversalMsg,
+) -> Result<CanSpendResponse, ContractError> {
     let account: UserAccount = ACCOUNT.load(deps.storage)?;
     let can_execute = account.can_execute(deps, address, vec![msg])?;
     Ok(can_execute)

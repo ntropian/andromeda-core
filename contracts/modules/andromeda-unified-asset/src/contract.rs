@@ -10,10 +10,11 @@ use cosmwasm_std::{
 use crate::constants::MAINNET_AXLUSDC_IBC;
 use crate::pair_contract::PairContracts;
 use crate::sourced_coin::SourcedCoin;
-use andromeda_modules::sources::Sources;
 use crate::state::{State, STATE};
+use andromeda_modules::sources::Sources;
 use andromeda_modules::unified_asset::{
-    ExecuteMsg, InstantiateMsg, LegacyOwnerResponse, MigrateMsg, QueryMsg, UnifyAssetsMsg, UnifiedAssetsResponse,
+    ExecuteMsg, InstantiateMsg, LegacyOwnerResponse, MigrateMsg, QueryMsg, UnifiedAssetsResponse,
+    UnifyAssetsMsg,
 };
 
 use cw2::{get_contract_version, set_contract_version};
@@ -44,11 +45,11 @@ pub fn instantiate(
     match msg.unified_price_contract {
         Some(contract) => {
             cfg.pair_contracts
-            .set_pair_contracts(cfg.home_network.clone(), Some(contract))?;
+                .set_pair_contracts(cfg.home_network.clone(), Some(contract))?;
         }
         None => {
             cfg.pair_contracts
-            .set_pair_contracts(cfg.home_network.clone(), None)?;
+                .set_pair_contracts(cfg.home_network.clone(), None)?;
         }
     }
     STATE.save(deps.storage, &cfg)?;
@@ -97,7 +98,7 @@ fn from_semver(err: semver::Error) -> StdError {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
@@ -105,6 +106,9 @@ pub fn execute(
         ExecuteMsg::UpdateLegacyOwner { new_owner } => {
             let valid_new_owner = deps.api.addr_validate(&new_owner)?;
             update_legacy_owner(deps, info, valid_new_owner)
+        }
+        ExecuteMsg::AndrReceive(msg) => {
+            ADOContract::default().execute(deps, env, info, msg, execute)
         }
     }
 }
@@ -174,7 +178,11 @@ pub fn unify_assets(
                     wrapped_sources: Sources { sources: vec![] },
                 };
                 let mut converted = unconverted
-                    .get_converted_to_usdc(deps, STATE.load(deps.storage)?.pair_contracts, assets_are_target_amount)
+                    .get_converted_to_usdc(
+                        deps,
+                        STATE.load(deps.storage)?.pair_contracts,
+                        assets_are_target_amount,
+                    )
                     .map_err(|e| {
                         common::error::ContractError::Std(StdError::GenericErr {
                             msg: format!("{:?}", e),

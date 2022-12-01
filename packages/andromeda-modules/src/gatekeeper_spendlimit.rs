@@ -1,3 +1,4 @@
+use common::ado_base::AndromedaMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -16,7 +17,9 @@ pub struct InstantiateMsg {
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     /// Proposes a new owner for the proxy contract – must be called by the existing owner
-    UpdateLegacyOwner { new_owner: String },
+    UpdateLegacyOwner {
+        new_owner: String,
+    },
     UpsertBeneficiary {
         new_beneficiary: PermissionedAddressParams,
     },
@@ -24,13 +27,16 @@ pub enum ExecuteMsg {
         new_permissioned_address: PermissionedAddressParams,
     },
     /// Removes an active spend-limited wallet. This includes beneficiaries.
-    RmPermissionedAddress { doomed_permissioned_address: String },
+    RmPermissionedAddress {
+        doomed_permissioned_address: String,
+    },
     /// Updates spend limit for a wallet. Update of period not supported: rm and re-add
     UpdatePermissionedAddressSpendLimit {
         permissioned_address: String,
         new_spend_limits: CoinLimit,
         is_beneficiary: String,
     },
+    AndrReceive(AndromedaMsg),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

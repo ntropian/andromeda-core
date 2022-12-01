@@ -1,6 +1,4 @@
-use ado_base::ADOContract;
 use andromeda_modules::{
-    gatekeeper_common::is_legacy_owner,
     permissioned_address::{PermissionedAddress, PermissionedAddressParams},
     sourced_coin::{get_admin_sourced_coin, SourcedCoins},
 };
@@ -154,8 +152,7 @@ impl State {
         addr: String,
         spend: Vec<Coin>,
     ) -> Result<SourcedCoins, CustomError> {
-        if check_owner(deps, addr.clone())
-        {
+        if check_owner(deps, addr.clone()) {
             return Ok(get_admin_sourced_coin());
         }
         let this_wallet = self.maybe_get_permissioned_address(addr)?;

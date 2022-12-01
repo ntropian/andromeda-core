@@ -1,3 +1,4 @@
+use common::ado_base::AndromedaMsg;
 use cosmwasm_std::Coin;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -15,6 +16,7 @@ pub struct InstantiateMsg {
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     UpdateLegacyOwner { new_owner: String },
+    AndrReceive(AndromedaMsg),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

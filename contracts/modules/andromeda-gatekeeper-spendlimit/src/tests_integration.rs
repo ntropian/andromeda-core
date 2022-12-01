@@ -1,9 +1,8 @@
-use andromeda_modules::{permissioned_address::{
-    PeriodType, PermissionedAddressParams, PermissionedAddresssResponse,
-}, gatekeeper_spendlimit::CanSpendResponse};
-use cosmwasm_std::{
-    Addr, Empty, Uint128, Coin, BlockInfo, Timestamp,
+use andromeda_modules::{
+    gatekeeper_spendlimit::CanSpendResponse,
+    permissioned_address::{PeriodType, PermissionedAddressParams, PermissionedAddresssResponse},
 };
+use cosmwasm_std::{Addr, BlockInfo, Coin, Empty, Timestamp, Uint128};
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
 use dummy_price_contract::msg::AssetPrice;
 
@@ -145,7 +144,7 @@ fn spendlimit_gatekeeper_multi_test() {
             period_multiple: 1,
             spend_limits: vec![andromeda_modules::permissioned_address::CoinLimit {
                 denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
-                .to_string(),
+                    .to_string(),
                 amount: 100_000_000u64,
                 limit_remaining: 100_000_000u64,
             }],
@@ -176,10 +175,10 @@ fn spendlimit_gatekeeper_multi_test() {
     let query_msg = andromeda_modules::gatekeeper_spendlimit::QueryMsg::CanSpend {
         sender: authorized_spender.clone(),
         funds: vec![Coin {
-                denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
-                    .to_string(),
-                amount: Uint128::from(99_000_000u128),
-            }],
+            denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
+                .to_string(),
+            amount: Uint128::from(99_000_000u128),
+        }],
     };
 
     let can_spend_response: CanSpendResponse = router
@@ -191,16 +190,17 @@ fn spendlimit_gatekeeper_multi_test() {
     // spending it should update the spend limit (not implemented here; called by the account module)
     // so let's manually update
     // note that only limit remaining changes (safer implementation todo)
-    let msg = andromeda_modules::gatekeeper_spendlimit::ExecuteMsg::UpdatePermissionedAddressSpendLimit {
-        permissioned_address: authorized_spender.clone(),
-        new_spend_limits: andromeda_modules::permissioned_address::CoinLimit {
-            denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
-            .to_string(),
-            amount: 100_000_000u64,
-            limit_remaining: 1_000_000u64,
-        },
-        is_beneficiary: "false".to_string(),
-    };
+    let msg =
+        andromeda_modules::gatekeeper_spendlimit::ExecuteMsg::UpdatePermissionedAddressSpendLimit {
+            permissioned_address: authorized_spender.clone(),
+            new_spend_limits: andromeda_modules::permissioned_address::CoinLimit {
+                denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
+                    .to_string(),
+                amount: 100_000_000u64,
+                limit_remaining: 1_000_000u64,
+            },
+            is_beneficiary: "false".to_string(),
+        };
     let _ = router
         .execute_contract(
             legacy_owner.clone(),
@@ -225,10 +225,10 @@ fn spendlimit_gatekeeper_multi_test() {
     let query_msg = andromeda_modules::gatekeeper_spendlimit::QueryMsg::CanSpend {
         sender: authorized_spender.clone(),
         funds: vec![Coin {
-                denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
-                    .to_string(),
-                amount: Uint128::from(2_000_000u128),
-            }],
+            denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
+                .to_string(),
+            amount: Uint128::from(2_000_000u128),
+        }],
     };
     let can_spend_response: CanSpendResponse = router
         .wrap()
@@ -237,15 +237,13 @@ fn spendlimit_gatekeeper_multi_test() {
     assert!(!can_spend_response.can_spend);
     // note that the above errors instead of returning false. Maybe a todo
 
-
     // nor can we spend 2 "ujunox"
     let query_msg = andromeda_modules::gatekeeper_spendlimit::QueryMsg::CanSpend {
         sender: authorized_spender.clone(),
         funds: vec![Coin {
-                denom: "ujunox"
-                    .to_string(),
-                amount: Uint128::from(2_000_000u128),
-            }],
+            denom: "ujunox".to_string(),
+            amount: Uint128::from(2_000_000u128),
+        }],
     };
     let can_spend_response: CanSpendResponse = router
         .wrap()
@@ -257,10 +255,10 @@ fn spendlimit_gatekeeper_multi_test() {
     let query_msg = andromeda_modules::gatekeeper_spendlimit::QueryMsg::CanSpend {
         sender: authorized_spender.clone(),
         funds: vec![Coin {
-                denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
-                    .to_string(),
-                amount: Uint128::from(1_000_000u128),
-            }],
+            denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
+                .to_string(),
+            amount: Uint128::from(1_000_000u128),
+        }],
     };
     let can_spend_response: CanSpendResponse = router
         .wrap()
@@ -280,10 +278,10 @@ fn spendlimit_gatekeeper_multi_test() {
     let query_msg = andromeda_modules::gatekeeper_spendlimit::QueryMsg::CanSpend {
         sender: authorized_spender.clone(),
         funds: vec![Coin {
-                denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
-                    .to_string(),
-                amount: Uint128::from(2_000_000u128),
-            }],
+            denom: "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034"
+                .to_string(),
+            amount: Uint128::from(2_000_000u128),
+        }],
     };
     let can_spend_response: CanSpendResponse = router
         .wrap()
@@ -295,15 +293,13 @@ fn spendlimit_gatekeeper_multi_test() {
     let query_msg = andromeda_modules::gatekeeper_spendlimit::QueryMsg::CanSpend {
         sender: authorized_spender.clone(),
         funds: vec![Coin {
-                denom: "ujunox"
-                    .to_string(),
-                amount: Uint128::from(2_000_000u128),
-            }],
+            denom: "ujunox".to_string(),
+            amount: Uint128::from(2_000_000u128),
+        }],
     };
     let can_spend_response: CanSpendResponse = router
         .wrap()
         .query_wasm_smart(gatekeeper_spendlimit_contract_addr.clone(), &query_msg)
         .unwrap();
     assert!(can_spend_response.can_spend);
-
 }
