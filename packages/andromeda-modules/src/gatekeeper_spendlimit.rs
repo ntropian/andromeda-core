@@ -39,7 +39,7 @@ pub enum ExecuteMsg {
     AndrReceive(AndromedaMsg),
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     /// Shows owner; always mutable
@@ -57,7 +57,7 @@ pub enum QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub struct MigrateMsg {}
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct WasmExecuteMsg {
     contract_addr: String,
     /// msg is the json-encoded ExecuteMsg struct (as raw Binary)

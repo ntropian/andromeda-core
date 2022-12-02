@@ -9,7 +9,7 @@ use crate::{
 };
 use andromeda_modules::sources::Sources;
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema, Debug)]
 pub struct SourcedCoin {
     pub coin: Coin,
     pub wrapped_sources: Sources,

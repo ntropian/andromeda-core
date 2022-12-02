@@ -19,7 +19,7 @@ pub enum ExecuteMsg {
     AndrReceive(AndromedaMsg),
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     LegacyOwner {},
@@ -27,7 +27,7 @@ pub enum QueryMsg {
     UnifyAssets(UnifyAssetsMsg),
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct UnifyAssetsMsg {
     // inactive currently; always USDC
@@ -36,7 +36,7 @@ pub struct UnifyAssetsMsg {
     pub assets_are_target_amount: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct UnifiedAssetsResponse {
     pub unified_asset: Coin,

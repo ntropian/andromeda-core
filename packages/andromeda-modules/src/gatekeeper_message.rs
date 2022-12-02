@@ -39,7 +39,7 @@ pub enum ExecuteMsg {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct WasmExecuteMsg {
     contract_addr: String,
     /// msg is the json-encoded ExecuteMsg struct (as raw Binary)

@@ -3,7 +3,7 @@ use cw20::Cw20ExecuteMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct PendingSubmsg {
     pub msg: CosmosMsg,
     pub contract_addr: Option<String>,
@@ -12,7 +12,7 @@ pub struct PendingSubmsg {
     pub ty: SubmsgType,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct PendingSubmsgGroup {
     msgs: Vec<PendingSubmsg>,
 }

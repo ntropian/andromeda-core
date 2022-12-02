@@ -9,13 +9,13 @@ use crate::{
     unified_asset::{UnifiedAssetsResponse, UnifyAssetsMsg},
 };
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema, Debug)]
 pub struct SourcedCoins {
     pub coins: Vec<Coin>,
     pub wrapped_sources: Sources,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum UnifyAssetsQueryMsg {
     UnifyAssets(UnifyAssetsMsg),

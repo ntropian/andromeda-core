@@ -10,8 +10,8 @@ use cosmwasm_std::{
     to_binary, Addr, BankMsg, BlockInfo, Coin, CosmosMsg, Timestamp, Uint128, WasmMsg,
 };
 use cw_multi_test::Executor;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+
+
 
 use crate::tests_helpers::{
     get_code_ids, instantiate_contracts, mock_app, use_contract, CodeIds, ContractAddresses,
@@ -44,14 +44,14 @@ fn user_account_multi_test() {
     // To test resets on recurring spend limits, we advance block_info's time
     let block_info: BlockInfo = router.block_info();
 
-    println!("");
+    println!();
     println!("{} ██████╗ ██████╗ ██╗", BLUE);
     println!("{}██╔═══██╗██╔══██╗██║", BLUE);
     println!("{}██║   ██║██████╔╝██║", BLUE);
     println!("{}██║   ██║██╔══██╗██║", BLUE);
     println!("{}╚██████╔╝██████╔╝██║", BLUE);
     println!("{} ╚═════╝ ╚═════╝ ╚═╝", BLUE);
-    println!("");
+    println!();
     println!("{} User Account Integration Multi-Test", FORCED_WHITE);
 
     println!(
@@ -416,7 +416,7 @@ fn user_account_multi_test() {
     let query_msg = andromeda_modules::user_account::QueryMsg::CanExecute {
         address: authorized_spender.clone(),
         msg: UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: contract_addresses.dummy_enterprise.to_string().clone(),
+            contract_addr: contract_addresses.dummy_enterprise.to_string(),
             msg: to_binary(&execute_msg).unwrap(),
             funds: vec![],
         })),
@@ -458,7 +458,7 @@ fn user_account_multi_test() {
         };
     let _ = router
         .execute_contract(
-            legacy_owner.clone(),
+            legacy_owner,
             use_contract(
                 contract_addresses.message_gatekeeper.clone(),
                 contract_addresses.clone(),
@@ -495,7 +495,7 @@ fn user_account_multi_test() {
         )
         .unwrap();
     println!("authorizations_response: {:?}", authorizations_response);
-    println!("");
+    println!();
 
     println!(
         "{}*** Test 4c: Can the authorized actor execute Kobayashi Maru with the wrong fields? ***{}",
@@ -509,7 +509,7 @@ fn user_account_multi_test() {
     let query_msg = andromeda_modules::user_account::QueryMsg::CanExecute {
         address: authorized_spender.clone(),
         msg: UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: contract_addresses.dummy_enterprise.to_string().clone(),
+            contract_addr: contract_addresses.dummy_enterprise.to_string(),
             msg: to_binary(&execute_msg).unwrap(),
             funds: vec![],
         })),
@@ -541,7 +541,7 @@ fn user_account_multi_test() {
     let query_msg = andromeda_modules::user_account::QueryMsg::CanExecute {
         address: authorized_spender.clone(),
         msg: UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: contract_addresses.dummy_enterprise.to_string().clone(),
+            contract_addr: contract_addresses.dummy_enterprise.to_string(),
             msg: to_binary(&execute_msg).unwrap(),
             funds: vec![],
         })),
@@ -574,9 +574,9 @@ fn user_account_multi_test() {
         strategy: "cheat".to_string(),
     };
     let query_msg = andromeda_modules::user_account::QueryMsg::CanExecute {
-        address: authorized_spender.clone(),
+        address: authorized_spender,
         msg: UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: contract_addresses.dummy_enterprise.to_string().clone(),
+            contract_addr: contract_addresses.dummy_enterprise.to_string(),
             msg: to_binary(&execute_msg).unwrap(),
             funds: vec![],
         })),
@@ -587,7 +587,7 @@ fn user_account_multi_test() {
         .query_wasm_smart(
             use_contract(
                 contract_addresses.user_account.clone(),
-                contract_addresses.clone(),
+                contract_addresses,
                 "Query".to_string(),
             ),
             &query_msg,
