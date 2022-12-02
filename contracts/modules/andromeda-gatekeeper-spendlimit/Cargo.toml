@@ -28,7 +28,7 @@ chrono = { path = "../../../packages/chrono" }
 
 andromeda-modules = { version = "0.1.0", path = "../../../packages/andromeda-modules" }
 andromeda-unified-asset = { path = "../andromeda-unified-asset" }
-dummy-price-contract = { path = "../dummy-price-contract" }
+dummy-price-contract = { path = "../../dummy/dummy-price-contract" }
 common = { version = "0.1.0", path = "../../../packages/common" }
 serde-json-value-wasm = { version = "0.1.0", path = "../../../packages/serde-json-value-wasm" }
 ado-base = { path = "../../../packages/ado-base", version = "0.1.0"}
