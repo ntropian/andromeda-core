@@ -77,7 +77,7 @@ fn user_account_multi_test() {
             &[],
         )
         .unwrap_err();
-    println!("{}...success{}", GREEN, WHITE);
+    println!("{}...error, as expected{}", GREEN, WHITE);
     println!();
 
     println!(
@@ -164,6 +164,7 @@ fn user_account_multi_test() {
         )
         .unwrap();
     assert!(can_spend_response.can_spend);
+    println!("response: can_spend: {}", can_spend_response.can_spend);
     println!("{}...success{}", GREEN, WHITE);
     println!();
 
@@ -228,8 +229,8 @@ fn user_account_multi_test() {
             &query_msg,
         )
         .map_err(ContractError::Std);
-    can_spend_response.unwrap_err();
-    // note that the above errors instead of returning false. Maybe a todo
+    let error = can_spend_response.unwrap_err();
+    println!("response: can_spend: {}", error);
     println!("{}...failed as expected{}", GREEN, WHITE);
     println!();
 
@@ -296,6 +297,7 @@ fn user_account_multi_test() {
         )
         .unwrap();
     assert!(can_spend_response.can_spend);
+    println!("response: can_spend: {}", can_spend_response.can_spend);
     println!("{}...success{}", GREEN, WHITE);
     println!();
 
@@ -329,6 +331,7 @@ fn user_account_multi_test() {
         )
         .unwrap();
     assert!(can_spend_response.can_spend);
+    println!("response: can_spend: {}", can_spend_response.can_spend);
     println!("{}...success{}", GREEN, WHITE);
     println!();
 
@@ -369,6 +372,7 @@ fn user_account_multi_test() {
         )
         .unwrap();
     assert!(can_spend_response.can_spend);
+    println!("response: can_spend: {}", can_spend_response.can_spend);
     println!("{}...success{}", GREEN, WHITE);
     println!();
 
@@ -401,6 +405,7 @@ fn user_account_multi_test() {
         )
         .unwrap();
     assert!(can_spend_response.can_spend);
+    println!("response: can_spend: {}", can_spend_response.can_spend);
     println!("{}...success{}", GREEN, WHITE);
     println!();
 
@@ -432,7 +437,8 @@ fn user_account_multi_test() {
             &query_msg,
         )
         .map_err(ContractError::Std);
-    can_spend_response.unwrap_err();
+    let error = can_spend_response.unwrap_err();
+    println!("response: can_spend: {}", error);
     println!("{}...failed as expected{}", GREEN, WHITE);
     println!();
 
@@ -525,7 +531,8 @@ fn user_account_multi_test() {
             &query_msg,
         )
         .map_err(ContractError::Std);
-    can_spend_response.unwrap_err();
+    let error = can_spend_response.unwrap_err();
+    println!("response: can_spend: {}", error);
     println!("{}...of course not, it's impossible{}", GREEN, WHITE);
     println!();
 
@@ -557,7 +564,8 @@ fn user_account_multi_test() {
             &query_msg,
         )
         .map_err(ContractError::Std);
-    can_spend_response.unwrap_err();
+    let error = can_spend_response.unwrap_err();
+    println!("response: can_spend: {}", error);
     println!(
         "{}...nope. One too many Priceline commercials.{}",
         GREEN, WHITE
@@ -592,6 +600,7 @@ fn user_account_multi_test() {
             &query_msg,
         )
         .unwrap();
+    println!("response: can_spend: {}", can_spend_response.can_spend);
     assert!(can_spend_response.can_spend);
     println!(
         "{}...success. Unlike Jimmy T, Alice can't cheat.{}",
@@ -612,11 +621,12 @@ fn user_account_multi_test() {
             &query_msg,
         )
         .unwrap();
-    assert!(!cheater_detected_response.cheater_detected);
     println!(
-        "{}...ok, no cheaters so far.{}",
-        GREEN, WHITE
+        "response: cheater_detected: {}",
+        cheater_detected_response.cheater_detected
     );
+    assert!(!cheater_detected_response.cheater_detected);
+    println!("{}...ok, no cheaters so far.{}", GREEN, WHITE);
     println!();
 
     println!(
@@ -660,10 +670,11 @@ fn user_account_multi_test() {
             &query_msg,
         )
         .unwrap();
-    assert!(cheater_detected_response.cheater_detected);
     println!(
-        "{}...success{}",
-        GREEN, WHITE
+        "response: cheater_detected: {}",
+        cheater_detected_response.cheater_detected
     );
+    assert!(cheater_detected_response.cheater_detected);
+    println!("{}...success{}", GREEN, WHITE);
     println!();
 }

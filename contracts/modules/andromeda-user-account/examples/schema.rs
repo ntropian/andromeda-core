@@ -1,7 +1,10 @@
 use std::env::current_dir;
 use std::fs::create_dir_all;
 
-use andromeda_modules::{gatekeeper_spendlimit::CanSpendResponse, user_account::{InstantiateMsg, ExecuteMsg, QueryMsg}};
+use andromeda_modules::{
+    gatekeeper_spendlimit::CanSpendResponse,
+    user_account::{ExecuteMsg, InstantiateMsg, QueryMsg},
+};
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
 fn main() {
