@@ -41,7 +41,6 @@ fn user_account_multi_test() {
         "{}*** Contracts Instantiated Successfully ***{}",
         GREEN, WHITE
     );
-    // We can now start executing actions on the contract and querying it as needed
 
     println!(
         "{}*** Test 1: Non-Owner cannot update legacy owner ***{}",

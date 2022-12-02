@@ -214,7 +214,7 @@ pub fn instantiate_contracts(
     let user_account_contract_addr = router
         .instantiate_contract(
             code_ids.user_account,
-            legacy_owner.clone(),
+            legacy_owner,
             &init_msg,
             &[],
             "user_account",
