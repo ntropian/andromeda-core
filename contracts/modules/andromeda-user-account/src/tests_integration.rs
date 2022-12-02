@@ -763,7 +763,7 @@ fn user_account_multi_test() {
         strategy: "philosophize".to_string(),
     };
     let query_msg = andromeda_modules::user_account::QueryMsg::CanExecute {
-        address: authorized_spender.clone(),
+        address: authorized_spender,
         msg: UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addresses.dummy_enterprise.to_string(),
             msg: to_binary(&execute_msg).unwrap(),
@@ -774,7 +774,7 @@ fn user_account_multi_test() {
     let can_spend_response: Result<CanSpendResponse, StdError> = router.wrap().query_wasm_smart(
         use_contract(
             contract_addresses.user_account.clone(),
-            contract_addresses.clone(),
+            contract_addresses,
             "Query".to_string(),
         ),
         &query_msg,
