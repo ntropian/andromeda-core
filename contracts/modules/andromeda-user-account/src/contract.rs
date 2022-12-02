@@ -3,8 +3,7 @@ use common::error::ContractError;
 use cosmwasm_std::ensure;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{
-    entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError,
-    StdResult,
+    entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
 
 use cw2::{get_contract_version, set_contract_version};

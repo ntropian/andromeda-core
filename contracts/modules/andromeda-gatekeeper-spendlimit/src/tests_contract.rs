@@ -11,16 +11,12 @@ mod tests {
     };
     use crate::ContractError;
     use andromeda_modules::gatekeeper_common::is_legacy_owner;
-    use andromeda_modules::gatekeeper_spendlimit::{
-        CanSpendResponse, ExecuteMsg, QueryMsg,
-    };
+    use andromeda_modules::gatekeeper_spendlimit::{CanSpendResponse, ExecuteMsg, QueryMsg};
     use andromeda_modules::permissioned_address::PeriodType;
     use andromeda_modules::unified_asset::LegacyOwnerResponse;
 
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{
-        coin, coins, from_binary, Api,
-    };
+    use cosmwasm_std::{coin, coins, from_binary, Api};
 
     const ANYONE: &str = "anyone";
     const RECEIVER: &str = "diane";

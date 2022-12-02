@@ -181,7 +181,9 @@ impl UserAccount {
         })) = msg.clone()
         {
             let empty_funds: Vec<Coin> = vec![];
-            if funds == empty_funds && self.is_authorized_permissioned_address_contract(contract_addr) {
+            if funds == empty_funds
+                && self.is_authorized_permissioned_address_contract(contract_addr)
+            {
                 return Ok(CanSpendResponse {
                     can_spend: true,
                     reason: "Active permissioned address spending blanket-authorized token"
