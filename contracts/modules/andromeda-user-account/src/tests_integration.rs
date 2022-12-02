@@ -654,7 +654,7 @@ fn user_account_multi_test() {
         .query_wasm_smart(
             use_contract(
                 contract_addresses.dummy_enterprise.clone(),
-                contract_addresses.clone(),
+                contract_addresses,
                 "Query".to_string(),
             ),
             &query_msg,

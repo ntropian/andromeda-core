@@ -3,12 +3,75 @@
   "title": "InstantiateMsg",
   "type": "object",
   "required": [
-    "minter"
+    "account"
   ],
   "properties": {
-    "minter": {
-      "description": "The address authorized to mint new receipts",
-      "type": "string"
+    "account": {
+      "$ref": "#/definitions/UserAccount"
+    },
+    "owner_updates_delay_secs": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "starting_usd_debt": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0.0
+    }
+  },
+  "definitions": {
+    "UserAccount": {
+      "type": "object",
+      "properties": {
+        "debt_gatekeeper_contract_addr": {
+          "description": "Contract that manages this account's debt (for fees)",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "delay_gatekeeper_contract_addr": {
+          "description": "Contract that manages actions which incur a delay",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "legacy_owner": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "message_gatekeeper_contract_addr": {
+          "description": "Contract that manages message types/fields for permissioned addresses",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sessionkey_gatekeeper_contract_addr": {
+          "description": "Contract that manages session keys",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "spendlimit_gatekeeper_contract_addr": {
+          "description": "Contract that manages spend limits for permissioned addresses",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
     }
   }
 }
