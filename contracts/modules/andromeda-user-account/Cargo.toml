@@ -30,5 +30,5 @@ andromeda-unified-asset = { path = "../andromeda-unified-asset" }
 cosmwasm-schema = "1.0.0"
 cw-multi-test = { version = "0.13.4" }
 andromeda-unified-asset = { path = "../andromeda-unified-asset" }
+dummy-counter-executable = { path = "../dummy-counter-executable" }
 dummy-price-contract = { path = "../dummy-price-contract" }
-

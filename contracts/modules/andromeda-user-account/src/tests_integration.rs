@@ -1,12 +1,17 @@
 use andromeda_gatekeeper_spendlimit::constants::JUNO_MAINNET_AXLUSDC_IBC;
 use andromeda_modules::{
     gatekeeper_common::UniversalMsg,
+    gatekeeper_message::{Authorization, AuthorizationsResponse},
     gatekeeper_spendlimit::CanSpendResponse,
     permissioned_address::{PeriodType, PermissionedAddressParams, PermissionedAddresssResponse},
 };
 use common::error::ContractError;
-use cosmwasm_std::{Addr, BankMsg, BlockInfo, Coin, CosmosMsg, Timestamp, Uint128};
+use cosmwasm_std::{
+    to_binary, Addr, BankMsg, BlockInfo, Coin, CosmosMsg, Timestamp, Uint128, WasmMsg,
+};
 use cw_multi_test::Executor;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 use crate::tests_helpers::{
     get_code_ids, instantiate_contracts, mock_app, use_contract, CodeIds, ContractAddresses,
@@ -15,6 +20,8 @@ use crate::tests_helpers::{
 const YELLOW_UNDERLINE: &str = "\x1b[1;33;4m";
 const GREEN: &str = "\x1b[1;32m";
 const WHITE: &str = "\x1b[0m";
+const BLUE: &str = "\x1b[1;34m";
+const FORCED_WHITE: &str = "\x1b[1;37m";
 
 #[test]
 fn user_account_multi_test() {
@@ -36,6 +43,16 @@ fn user_account_multi_test() {
 
     // To test resets on recurring spend limits, we advance block_info's time
     let block_info: BlockInfo = router.block_info();
+
+    println!("");
+    println!("{} ██████╗ ██████╗ ██╗", BLUE);
+    println!("{}██╔═══██╗██╔══██╗██║", BLUE);
+    println!("{}██║   ██║██████╔╝██║", BLUE);
+    println!("{}██║   ██║██╔══██╗██║", BLUE);
+    println!("{}╚██████╔╝██████╔╝██║", BLUE);
+    println!("{} ╚═════╝ ╚═════╝ ╚═╝", BLUE);
+    println!("");
+    println!("{} User Account Integration Multi-Test", FORCED_WHITE);
 
     println!(
         "{}*** Contracts Instantiated Successfully ***{}",
@@ -121,7 +138,7 @@ fn user_account_multi_test() {
     // we could query with andromeda_modules::gatekeeper_spendlimit::QueryMsg::CanSpend,
     // but this is an integration test
     println!(
-        "{}*** Test 3: Check that permissioned user can spend $99 ***{}",
+        "{}*** Test 3a: Check that permissioned user can spend $99 ***{}",
         YELLOW_UNDERLINE, WHITE
     );
     let query_msg = andromeda_modules::user_account::QueryMsg::CanExecute {
@@ -155,7 +172,7 @@ fn user_account_multi_test() {
     // so let's manually update
     // note that only limit remaining changes (safer implementation todo)
     println!(
-        "{}*** Test 4: Manually reduce today's spending limit to $1 ***{}",
+        "{}*** Test 3b: Manually reduce today's spending limit to $1 ***{}",
         YELLOW_UNDERLINE, WHITE
     );
     let msg =
@@ -170,7 +187,7 @@ fn user_account_multi_test() {
         };
     let _ = router
         .execute_contract(
-            legacy_owner,
+            legacy_owner.clone(),
             use_contract(
                 contract_addresses.spendlimit_gatekeeper.clone(),
                 contract_addresses.clone(),
@@ -185,7 +202,7 @@ fn user_account_multi_test() {
 
     // now we should NOT be able to spend even $2
     println!(
-        "{}*** Test 5: Try (and fail) to send $2 ***{}",
+        "{}*** Test 3c: Try (and fail) to send $2 ***{}",
         YELLOW_UNDERLINE, WHITE
     );
     let query_msg = andromeda_modules::user_account::QueryMsg::CanExecute {
@@ -219,7 +236,7 @@ fn user_account_multi_test() {
 
     // nor can we spend 2 "ujunox"
     println!(
-        "{}*** Test 6: Try (and fail) to send 2 Juno (valued by dummy dex at $4.56 each) ***{}",
+        "{}*** Test 3d: Try (and fail) to send 2 Juno (valued by dummy dex at $4.56 each) ***{}",
         YELLOW_UNDERLINE, WHITE
     );
     let query_msg = andromeda_modules::user_account::QueryMsg::CanExecute {
@@ -252,7 +269,7 @@ fn user_account_multi_test() {
 
     // but we can spend $1
     println!(
-        "{}*** Test 7: Check we can spend $1 ***{}",
+        "{}*** Test 3e: Check we can spend $1 ***{}",
         YELLOW_UNDERLINE, WHITE
     );
     let query_msg = andromeda_modules::user_account::QueryMsg::CanExecute {
@@ -285,7 +302,7 @@ fn user_account_multi_test() {
 
     // or 0.1 JUNO
     println!(
-        "{}*** Test 8: Check we can spend 0.1 Juno ($0.45) ***{}",
+        "{}*** Test 3f: Check we can spend 0.1 Juno ($0.45) ***{}",
         YELLOW_UNDERLINE, WHITE
     );
     let query_msg = andromeda_modules::user_account::QueryMsg::CanExecute {
@@ -317,7 +334,7 @@ fn user_account_multi_test() {
     println!();
 
     println!(
-        "{}*** Test 9: Go forward 1 day, and now we can spend $2 since limit has reset ***{}",
+        "{}*** Test 3g: Go forward 1 day, and now we can spend $2 since limit has reset ***{}",
         YELLOW_UNDERLINE, WHITE
     );
     let old_block_info = router.block_info();
@@ -357,11 +374,11 @@ fn user_account_multi_test() {
     println!();
 
     println!(
-        "{}*** Test 10: We can spend 2 Juno now as well ***{}",
+        "{}*** Test 3h: We can spend 2 Juno now as well ***{}",
         YELLOW_UNDERLINE, WHITE
     );
     let query_msg = andromeda_modules::user_account::QueryMsg::CanExecute {
-        address: authorized_spender,
+        address: authorized_spender.clone(),
         msg: {
             UniversalMsg::Legacy(CosmosMsg::Bank(BankMsg::Send {
                 to_address: "bob".to_string(),
@@ -378,7 +395,7 @@ fn user_account_multi_test() {
         .query_wasm_smart(
             use_contract(
                 contract_addresses.user_account.clone(),
-                contract_addresses,
+                contract_addresses.clone(),
                 "Query".to_string(),
             ),
             &query_msg,
@@ -386,5 +403,200 @@ fn user_account_multi_test() {
         .unwrap();
     assert!(can_spend_response.can_spend);
     println!("{}...success{}", GREEN, WHITE);
+    println!();
+
+    println!(
+        "{}*** Test 4a: Non-owner cannot execute the Kobayashi Maru action, not even without funds ***{}",
+        YELLOW_UNDERLINE, WHITE
+    );
+    let execute_msg = dummy_counter_executable::msg::ExecuteMsg::KobayashiMaru {
+        captain: "kirk".to_string(),
+        strategy: "cheat".to_string(),
+    };
+    let query_msg = andromeda_modules::user_account::QueryMsg::CanExecute {
+        address: authorized_spender.clone(),
+        msg: UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: contract_addresses.dummy_enterprise.to_string().clone(),
+            msg: to_binary(&execute_msg).unwrap(),
+            funds: vec![],
+        })),
+        funds: vec![],
+    };
+    let can_spend_response: Result<CanSpendResponse, ContractError> = router
+        .wrap()
+        .query_wasm_smart(
+            use_contract(
+                contract_addresses.user_account.clone(),
+                contract_addresses.clone(),
+                "Query".to_string(),
+            ),
+            &query_msg,
+        )
+        .map_err(ContractError::Std);
+    can_spend_response.unwrap_err();
+    println!("{}...failed as expected{}", GREEN, WHITE);
+    println!();
+
+    println!(
+        "{}*** Test 4b: Add authorization for alice to KobayashiMaru, with 'kirk' and 'cheat'  ***{}",
+        YELLOW_UNDERLINE, WHITE
+    );
+    let add_authorization_msg =
+        andromeda_modules::gatekeeper_message::ExecuteMsg::AddAuthorization {
+            new_authorization: Authorization {
+                identifier: 0u16, // no effect for adding
+                actor: Some(Addr::unchecked(authorized_spender.clone())),
+                contract: Some(contract_addresses.dummy_enterprise.clone()),
+                message_name: Some("MsgExecuteContract".to_string()),
+                // remember in direct cases, this should be snake_case
+                wasmaction_name: Some("kobayashi_maru".to_string()),
+                fields: Some(vec![
+                    (String::from("captain"), String::from("kirk")),
+                    (String::from("strategy"), String::from("cheat")),
+                ]),
+            },
+        };
+    let _ = router
+        .execute_contract(
+            legacy_owner.clone(),
+            use_contract(
+                contract_addresses.message_gatekeeper.clone(),
+                contract_addresses.clone(),
+                "Execute".to_string(),
+            ),
+            &add_authorization_msg,
+            &[],
+        )
+        .unwrap();
+    println!("{}...success{}", GREEN, WHITE);
+    println!();
+
+    // print out our authorizations
+    println!("Current authorizations:");
+    let query_msg = andromeda_modules::gatekeeper_message::QueryMsg::Authorizations {
+        identifier: None,
+        actor: None,
+        target_contract: Some(contract_addresses.dummy_enterprise.to_string()),
+        message_name: None,
+        wasmaction_name: None,
+        fields: None,
+        limit: None,
+        start_after: None,
+    };
+    let authorizations_response: AuthorizationsResponse = router
+        .wrap()
+        .query_wasm_smart(
+            use_contract(
+                contract_addresses.message_gatekeeper.clone(),
+                contract_addresses.clone(),
+                "Query".to_string(),
+            ),
+            &query_msg,
+        )
+        .unwrap();
+    println!("authorizations_response: {:?}", authorizations_response);
+    println!("");
+
+    println!(
+        "{}*** Test 4c: Can the authorized actor execute Kobayashi Maru with the wrong fields? ***{}",
+        YELLOW_UNDERLINE, WHITE
+    );
+    use dummy_counter_executable::msg::ExecuteMsg::KobayashiMaru;
+    let execute_msg = KobayashiMaru {
+        captain: "picard".to_string(),
+        strategy: "engage".to_string(),
+    };
+    let query_msg = andromeda_modules::user_account::QueryMsg::CanExecute {
+        address: authorized_spender.clone(),
+        msg: UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: contract_addresses.dummy_enterprise.to_string().clone(),
+            msg: to_binary(&execute_msg).unwrap(),
+            funds: vec![],
+        })),
+        funds: vec![],
+    };
+    let can_spend_response: Result<CanSpendResponse, ContractError> = router
+        .wrap()
+        .query_wasm_smart(
+            use_contract(
+                contract_addresses.user_account.clone(),
+                contract_addresses.clone(),
+                "Query".to_string(),
+            ),
+            &query_msg,
+        )
+        .map_err(ContractError::Std);
+    can_spend_response.unwrap_err();
+    println!("{}...of course not, it's impossible{}", GREEN, WHITE);
+    println!();
+
+    println!(
+        "{}*** Test 4d: What about the right captain, but the wrong strategy? ***{}",
+        YELLOW_UNDERLINE, WHITE
+    );
+    let execute_msg = KobayashiMaru {
+        captain: "kirk".to_string(),
+        strategy: "seduce".to_string(),
+    };
+    let query_msg = andromeda_modules::user_account::QueryMsg::CanExecute {
+        address: authorized_spender.clone(),
+        msg: UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: contract_addresses.dummy_enterprise.to_string().clone(),
+            msg: to_binary(&execute_msg).unwrap(),
+            funds: vec![],
+        })),
+        funds: vec![],
+    };
+    let can_spend_response: Result<CanSpendResponse, ContractError> = router
+        .wrap()
+        .query_wasm_smart(
+            use_contract(
+                contract_addresses.user_account.clone(),
+                contract_addresses.clone(),
+                "Query".to_string(),
+            ),
+            &query_msg,
+        )
+        .map_err(ContractError::Std);
+    can_spend_response.unwrap_err();
+    println!(
+        "{}...nope. One too many Priceline commercials.{}",
+        GREEN, WHITE
+    );
+    println!();
+
+    println!(
+        "{}*** Test 4e: But if both fields match the authorization... ***{}",
+        YELLOW_UNDERLINE, WHITE
+    );
+    let execute_msg = KobayashiMaru {
+        captain: "kirk".to_string(),
+        strategy: "cheat".to_string(),
+    };
+    let query_msg = andromeda_modules::user_account::QueryMsg::CanExecute {
+        address: authorized_spender.clone(),
+        msg: UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: contract_addresses.dummy_enterprise.to_string().clone(),
+            msg: to_binary(&execute_msg).unwrap(),
+            funds: vec![],
+        })),
+        funds: vec![],
+    };
+    let can_spend_response: CanSpendResponse = router
+        .wrap()
+        .query_wasm_smart(
+            use_contract(
+                contract_addresses.user_account.clone(),
+                contract_addresses.clone(),
+                "Query".to_string(),
+            ),
+            &query_msg,
+        )
+        .unwrap();
+    assert!(can_spend_response.can_spend);
+    println!(
+        "{}...success. Unlike Jimmy T, Alice can't cheat.{}",
+        GREEN, WHITE
+    );
     println!();
 }

@@ -1,6 +1,7 @@
 use andromeda_modules::user_account::UserAccount;
 use cosmwasm_std::{Addr, Empty, Uint128};
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
+use dummy_counter_executable::msg::InstantiateMsg;
 use dummy_price_contract::msg::AssetPrice;
 
 #[allow(dead_code)]
@@ -24,6 +25,16 @@ pub fn dummy_dex_contract() -> Box<dyn Contract<Empty>> {
         dummy_price_contract::contract::execute,
         dummy_price_contract::contract::instantiate,
         dummy_price_contract::contract::query,
+    );
+    Box::new(contract)
+}
+
+#[allow(dead_code)]
+pub fn dummy_executable_contract() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new(
+        dummy_counter_executable::contract::execute,
+        dummy_counter_executable::contract::instantiate,
+        dummy_counter_executable::contract::query,
     );
     Box::new(contract)
 }
@@ -93,6 +104,7 @@ pub fn user_account_instantiate_msg(
 pub struct CodeIds {
     pub asset_unifier: u64,
     pub dummy_dex: u64,
+    pub dummy_enterprise: u64,
     pub gatekeeper_spendlimit: u64,
     pub gatekeeper_message: u64,
     pub user_account: u64,
@@ -102,6 +114,7 @@ pub fn get_code_ids(app: &mut App) -> CodeIds {
     CodeIds {
         asset_unifier: app.store_code(asset_unifier_contract()),
         dummy_dex: app.store_code(dummy_dex_contract()),
+        dummy_enterprise: app.store_code(dummy_executable_contract()),
         gatekeeper_spendlimit: app.store_code(gatekeeper_spendlimit_contract()),
         gatekeeper_message: app.store_code(gatekeeper_message_contract()),
         user_account: app.store_code(user_account_contract()),
@@ -133,7 +146,7 @@ pub fn instantiate_contracts(
         ],
     };
     // Instantiate the dummy price contract using its stored code id
-    let mocked_dummy_contract_addr = router
+    let mocked_dummy_dex_contract_addr = router
         .instantiate_contract(
             code_ids.dummy_dex,
             legacy_owner.clone(),
@@ -144,10 +157,22 @@ pub fn instantiate_contracts(
         )
         .unwrap();
 
+    // Instantiate the dummy price contract using its stored code id
+    let mocked_dummy_enterprise_contract_addr = router
+        .instantiate_contract(
+            code_ids.dummy_enterprise,
+            legacy_owner.clone(),
+            &InstantiateMsg {},
+            &[],
+            "dummy_enterprise",
+            None,
+        )
+        .unwrap();
+
     // Setup asset unifier price contract, using dummy price contract address
     let init_msg = asset_unifier_instantiate_msg(
         Some(legacy_owner.to_string()),
-        mocked_dummy_contract_addr.to_string(),
+        mocked_dummy_dex_contract_addr.to_string(),
     );
     // Instantiate the asset unifier contract
     let mocked_asset_unifier_addr = router
@@ -230,7 +255,8 @@ pub fn instantiate_contracts(
         debt_gatekeeper: Addr::unchecked("Undeployed"),
         user_account: user_account_contract_addr,
         asset_unifier: mocked_asset_unifier_addr,
-        dummy_price: mocked_dummy_contract_addr,
+        dummy_price: mocked_dummy_dex_contract_addr,
+        dummy_enterprise: mocked_dummy_enterprise_contract_addr,
     }
 }
 
@@ -244,6 +270,7 @@ pub struct ContractAddresses {
     pub user_account: Addr,
     pub asset_unifier: Addr,
     pub dummy_price: Addr,
+    pub dummy_enterprise: Addr,
 }
 
 pub fn use_contract(addy: Addr, contracts: ContractAddresses, ty: String) -> Addr {

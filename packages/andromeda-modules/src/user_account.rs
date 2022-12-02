@@ -126,13 +126,16 @@ impl UserAccount {
         // if user is owner, check debt and delay
         if let Some(addy) = self.legacy_owner.clone() {
             if addy == address {
+                println!("Calling address is user account legacy owner.");
                 return self.can_owner_execute(deps, msgs[0].clone());
             }
         } else if ADOContract::default().is_owner_or_operator(deps.storage, address.as_str())?
         // probably todo: operators can have restrictions here
         {
+            println!("Calling address is user account owner.");
             return self.can_owner_execute(deps, msgs[0].clone());
         }
+        println!("Calling address is not an owner.");
         self.can_nonowner_execute(deps, address, msgs[0].clone())
     }
 
@@ -191,7 +194,7 @@ impl UserAccount {
                 });
             }
         }
-        println!("\x1b[3mChecking if tx uses funds...\x1b[0m");
+        println!("\x1b[3mNo blanket authorizations apply. Checking if tx uses funds...\x1b[0m");
 
         // check if TX is using funds at all. (This way we know whether
         // to run funds and debt checks)
@@ -226,15 +229,7 @@ impl UserAccount {
                             spend_limit_authorization_rider = true;
                         }
                         // can't immediately pass but can proceed to fund checking
-                        match funds {
-                            x if x.is_empty() => {
-                                return Ok(CanSpendResponse {
-                                    can_spend: true,
-                                    reason: "Authorized action with no funds".to_string(),
-                                });
-                            }
-                            _ => funds,
-                        }
+                        funds
                     }
                     CosmosMsg::Bank(BankMsg::Send {
                         to_address: _,
