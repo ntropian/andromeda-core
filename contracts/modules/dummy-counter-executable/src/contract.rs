@@ -33,7 +33,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::KobayashiMaru { captain, strategy } => {
-            if strategy == "cheat".to_string() {
+            if strategy == *"cheat" {
                 CHEATER_DETECTED.save(deps.storage, &true)?;
             }
             let response = Response::new()
