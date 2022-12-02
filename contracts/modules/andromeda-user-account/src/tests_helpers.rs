@@ -4,6 +4,9 @@ use cw_multi_test::{App, Contract, ContractWrapper, Executor};
 use dummy_counter_executable::msg::InstantiateMsg;
 use dummy_price_contract::msg::AssetPrice;
 
+const BLUE: &str = "\x1b[1;34m";
+const WHITE: &str = "\x1b[0m";
+
 #[allow(dead_code)]
 pub fn mock_app() -> App {
     App::default()
@@ -283,14 +286,18 @@ pub fn use_contract(addy: Addr, contracts: ContractAddresses, ty: String) -> Add
         val if val == contracts.user_account => "User Account".to_string(),
         val if val == contracts.asset_unifier => "Asset Unifier".to_string(),
         val if val == contracts.dummy_price => "Dummy DEX".to_string(),
+        val if val == contracts.dummy_enterprise => "U.S.S. Executable".to_string(),
         _ => "Unknown contract".to_string(),
     };
     match ty {
         val if val == *"Execute" => {
-            println!("Calling contract: {}", contract_human_name);
+            println!("Calling contract: {}{}{}", BLUE, contract_human_name, WHITE);
         }
         val if val == *"Query" => {
-            println!("Querying contract: {}", contract_human_name);
+            println!(
+                "Querying contract: {}{}{}",
+                BLUE, contract_human_name, WHITE
+            );
         }
         _ => panic!("bad type, use execute or query"),
     }

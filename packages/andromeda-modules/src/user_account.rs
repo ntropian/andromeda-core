@@ -47,7 +47,7 @@ pub enum ExecuteMsg {
     /// Execute a message, if it passes the checks
     Execute {
         /// The message to execute
-        msg: UniversalMsg,
+        universal_msg: UniversalMsg,
     },
     /// note this doesn't let the legacy owner be set to None
     UpdateLegacyOwner {
@@ -317,7 +317,7 @@ impl UserAccount {
     ) -> Result<bool, ContractError> {
         if let Some(contract_addr) = self.spendlimit_gatekeeper_contract_addr.clone() {
             let query_msg: SpendlimitQueryMsg = CanSpend { sender, funds };
-            println!("Inter-contract query: User Account querying Spendlimit Gatekeeper");
+            println!("Inter-contract query: \x1b[1;34mUser Account\x1b[0m querying \x1b[1;34mSpendlimit Gatekeeper\x1b[0m");
             let query_response: CanSpendResponse =
                 deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                     contract_addr,
@@ -337,7 +337,7 @@ impl UserAccount {
     ) -> Result<bool, ContractError> {
         if let Some(contract_addr) = self.message_gatekeeper_contract_addr.clone() {
             let query_msg: MessageQueryMsg = CheckTransaction { msg, sender };
-            println!("Inter-contract query: Asset Unifer querying Message Gatekeeper");
+            println!("Inter-contract query: \x1b[1;34mAsset Unifer\x1b[0m querying \x1b[1;34mMessage Gatekeeper\x1b[0m");
             let query_response: AuthorizationsResponse =
                 deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                     contract_addr,

@@ -10,8 +10,7 @@ use cosmwasm_std::{
     to_binary, Addr, BankMsg, BlockInfo, Coin, CosmosMsg, Timestamp, Uint128, WasmMsg,
 };
 use cw_multi_test::Executor;
-
-
+use dummy_counter_executable::msg::CheaterDetectedResponse;
 
 use crate::tests_helpers::{
     get_code_ids, instantiate_contracts, mock_app, use_contract, CodeIds, ContractAddresses,
@@ -574,7 +573,7 @@ fn user_account_multi_test() {
         strategy: "cheat".to_string(),
     };
     let query_msg = andromeda_modules::user_account::QueryMsg::CanExecute {
-        address: authorized_spender,
+        address: authorized_spender.clone(),
         msg: UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract_addresses.dummy_enterprise.to_string(),
             msg: to_binary(&execute_msg).unwrap(),
@@ -587,7 +586,7 @@ fn user_account_multi_test() {
         .query_wasm_smart(
             use_contract(
                 contract_addresses.user_account.clone(),
-                contract_addresses,
+                contract_addresses.clone(),
                 "Query".to_string(),
             ),
             &query_msg,
@@ -596,6 +595,74 @@ fn user_account_multi_test() {
     assert!(can_spend_response.can_spend);
     println!(
         "{}...success. Unlike Jimmy T, Alice can't cheat.{}",
+        GREEN, WHITE
+    );
+    println!();
+
+    println!("Making sure no cheaters have been detected yet...");
+    let query_msg = dummy_counter_executable::msg::QueryMsg::CheaterDetected {};
+    let cheater_detected_response: CheaterDetectedResponse = router
+        .wrap()
+        .query_wasm_smart(
+            use_contract(
+                contract_addresses.dummy_enterprise.clone(),
+                contract_addresses.clone(),
+                "Query".to_string(),
+            ),
+            &query_msg,
+        )
+        .unwrap();
+    assert!(!cheater_detected_response.cheater_detected);
+    println!(
+        "{}...ok, no cheaters so far.{}",
+        GREEN, WHITE
+    );
+    println!();
+
+    println!(
+        "{}*** Test 4f: Finally, let's make sure message is actually executed. ***{}",
+        YELLOW_UNDERLINE, WHITE
+    );
+    let execute_msg = KobayashiMaru {
+        captain: "kirk".to_string(),
+        strategy: "cheat".to_string(),
+    };
+    let wrapped_execute_msg = andromeda_modules::user_account::ExecuteMsg::Execute {
+        universal_msg: UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: contract_addresses.dummy_enterprise.to_string(),
+            msg: to_binary(&execute_msg).unwrap(),
+            funds: vec![],
+        })),
+    };
+    let _res = router
+        .execute_contract(
+            Addr::unchecked(authorized_spender),
+            use_contract(
+                contract_addresses.user_account.clone(),
+                contract_addresses.clone(),
+                "Execute".to_string(),
+            ),
+            &wrapped_execute_msg,
+            &[],
+        )
+        .unwrap();
+
+    println!("Making sure cheaters have been detected...");
+    let query_msg = dummy_counter_executable::msg::QueryMsg::CheaterDetected {};
+    let cheater_detected_response: CheaterDetectedResponse = router
+        .wrap()
+        .query_wasm_smart(
+            use_contract(
+                contract_addresses.dummy_enterprise.clone(),
+                contract_addresses.clone(),
+                "Query".to_string(),
+            ),
+            &query_msg,
+        )
+        .unwrap();
+    assert!(cheater_detected_response.cheater_detected);
+    println!(
+        "{}...success{}",
         GREEN, WHITE
     );
     println!();

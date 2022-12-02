@@ -1,11 +1,12 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
 // use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{CheaterDetectedResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::state::CHEATER_DETECTED;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:dummy-counter-executable";
@@ -18,19 +19,23 @@ pub fn instantiate(
     _info: MessageInfo,
     _msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
+    CHEATER_DETECTED.save(deps.storage, &false)?;
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    _deps: DepsMut,
+    deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::KobayashiMaru { captain, strategy } => {
+            if strategy == "cheat".to_string() {
+                CHEATER_DETECTED.save(deps.storage, &true)?;
+            }
             let response = Response::new()
                 .add_attribute("captain", captain)
                 .add_attribute("strategy", strategy);
@@ -40,8 +45,16 @@ pub fn execute(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    unimplemented!()
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::CheaterDetected {} => to_binary(&detect_cheater(deps)?),
+    }
+}
+
+fn detect_cheater(deps: Deps) -> StdResult<CheaterDetectedResponse> {
+    Ok(CheaterDetectedResponse {
+        cheater_detected: CHEATER_DETECTED.load(deps.storage)?,
+    })
 }
 
 #[cfg(test)]

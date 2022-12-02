@@ -1,6 +1,6 @@
 use ado_base::ADOContract;
 use common::error::ContractError;
-use cosmwasm_std::ensure;
+use cosmwasm_std::{ensure, CosmosMsg, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{
     entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
@@ -87,8 +87,28 @@ pub fn execute(
         }
         ExecuteMsg::ProposeUpdateOwner { new_owner: _ } => todo!(),
         ExecuteMsg::ChangeOwnerUpdatesDelay { new_delay: _ } => todo!(),
-        ExecuteMsg::Execute { msg: _ } => todo!(),
+        ExecuteMsg::Execute { universal_msg } => execute_execute(deps, info, universal_msg),
         ExecuteMsg::AndrReceive(_) => todo!(),
+    }
+}
+
+fn execute_execute(
+    deps: DepsMut,
+    info: MessageInfo,
+    msg: UniversalMsg,
+) -> Result<Response, ContractError> {
+    ensure!(
+        can_execute(deps.as_ref(), info.sender.to_string(), msg.clone())?.can_spend,
+        ContractError::Unauthorized {}
+    );
+
+    match msg {
+        UniversalMsg::Legacy(legacy_msg) => Ok(Response::new()
+            .add_attribute("execute_msg", "cosmos_msg")
+            .add_message(legacy_msg)),
+        UniversalMsg::Andromeda(_andromeda_msg) => {
+            todo!()
+        }
     }
 }
 

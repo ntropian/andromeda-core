@@ -1,4 +1,4 @@
-use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_schema::cw_serde;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 #[cw_serde]
@@ -11,5 +11,11 @@ pub enum ExecuteMsg {
 }
 
 #[cw_serde]
-#[derive(QueryResponses)]
-pub enum QueryMsg {}
+pub enum QueryMsg {
+    CheaterDetected {},
+}
+
+#[cw_serde]
+pub struct CheaterDetectedResponse {
+    pub cheater_detected: bool,
+}
