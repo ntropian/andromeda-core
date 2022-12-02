@@ -4,7 +4,8 @@ use common::{
     error::ContractError,
 };
 use cosmwasm_std::{
-    ensure, to_binary, BankMsg, Coin, CosmosMsg, Deps, QueryRequest, StakingMsg, WasmMsg, WasmQuery,
+    ensure, to_binary, BankMsg, Coin, CosmosMsg, Deps, QueryRequest, StakingMsg, StdError, WasmMsg,
+    WasmQuery,
 };
 use cw_storage_plus::Item;
 use schemars::JsonSchema;
@@ -13,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     gatekeeper_common::UniversalMsg,
     gatekeeper_message::AuthorizationsResponse,
+    gatekeeper_sessionkey::CanExecuteResponse,
     gatekeeper_spendlimit::CanSpendResponse,
     submsgs::{PendingSubmsg, SubmsgType, WasmmsgType},
 };
@@ -22,6 +24,9 @@ use SpendlimitQueryMsg::CanSpend;
 
 use crate::gatekeeper_message::QueryMsg as MessageQueryMsg;
 use MessageQueryMsg::CheckTransaction;
+
+use crate::gatekeeper_sessionkey::QueryMsg as SessionkeyQueryMsg;
+use SessionkeyQueryMsg::CanExecute;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -171,6 +176,15 @@ impl UserAccount {
         address: String,
         msg: UniversalMsg,
     ) -> Result<CanSpendResponse, ContractError> {
+        // Is this an admin-strength session key?
+        println!("\x1b[3mChecking if address is admin session key\x1b[0m");
+        if self.is_admin_session_key(deps, address.clone(), msg.clone())? {
+            return Ok(CanSpendResponse {
+                can_spend: true,
+                reason: "Sender is active admin session key".to_string(),
+            });
+        }
+
         // check for blanket authorizations ("any permissioned address can spend this")
         // usefulness TBD, but good for ensuring some low-value utility or event token
         // is easily and relatively cheaply used.
@@ -307,6 +321,32 @@ impl UserAccount {
             can_spend: true,
             reason: "all checks passed".to_string(),
         })
+    }
+
+    pub fn is_admin_session_key(
+        &self,
+        deps: Deps,
+        sender: String,
+        msg: UniversalMsg,
+    ) -> Result<bool, StdError> {
+        if let Some(contract_addr) = self.sessionkey_gatekeeper_contract_addr.clone() {
+            let query_msg: SessionkeyQueryMsg = CanExecute {
+                sender,
+                message: msg,
+            };
+            println!("Inter-contract query: \x1b[1;34mUser Account\x1b[0m querying \x1b[1;34mSessionkey Gatekeeper\x1b[0m");
+            let query_response: Result<CanExecuteResponse, StdError> =
+                deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+                    contract_addr,
+                    msg: to_binary(&query_msg)?,
+                }));
+            match query_response {
+                Err(_e) => Ok(false),
+                Ok(response) => Ok(response.can_execute),
+            }
+        } else {
+            Ok(false)
+        }
     }
 
     pub fn spend_is_ok(

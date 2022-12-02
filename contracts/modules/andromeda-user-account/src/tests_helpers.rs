@@ -43,6 +43,16 @@ pub fn dummy_executable_contract() -> Box<dyn Contract<Empty>> {
 }
 
 #[allow(dead_code)]
+pub fn gatekeeper_sessionkey_contract() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new(
+        andromeda_gatekeeper_sessionkey::contract::execute,
+        andromeda_gatekeeper_sessionkey::contract::instantiate,
+        andromeda_gatekeeper_sessionkey::contract::query,
+    );
+    Box::new(contract)
+}
+
+#[allow(dead_code)]
 pub fn gatekeeper_spendlimit_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
         andromeda_gatekeeper_spendlimit::contract::execute,
@@ -87,6 +97,7 @@ pub fn user_account_instantiate_msg(
     legacy_owner: Option<String>,
     spendlimit_gatekeeper_contract_addr: Option<String>,
     message_gatekeeper_contract_addr: Option<String>,
+    sessionkey_gatekeeper_contract_addr: Option<String>,
     starting_usd_debt: Option<u64>,
     owner_updates_delay_secs: Option<u64>,
 ) -> andromeda_modules::user_account::InstantiateMsg {
@@ -96,7 +107,7 @@ pub fn user_account_instantiate_msg(
             spendlimit_gatekeeper_contract_addr,
             message_gatekeeper_contract_addr,
             delay_gatekeeper_contract_addr: None,
-            sessionkey_gatekeeper_contract_addr: None,
+            sessionkey_gatekeeper_contract_addr,
             debt_gatekeeper_contract_addr: None,
         },
         starting_usd_debt,
@@ -110,6 +121,7 @@ pub struct CodeIds {
     pub dummy_enterprise: u64,
     pub gatekeeper_spendlimit: u64,
     pub gatekeeper_message: u64,
+    pub gatekeeper_sessionkey: u64,
     pub user_account: u64,
 }
 
@@ -119,6 +131,7 @@ pub fn get_code_ids(app: &mut App) -> CodeIds {
         dummy_dex: app.store_code(dummy_dex_contract()),
         dummy_enterprise: app.store_code(dummy_executable_contract()),
         gatekeeper_spendlimit: app.store_code(gatekeeper_spendlimit_contract()),
+        gatekeeper_sessionkey: app.store_code(gatekeeper_sessionkey_contract()),
         gatekeeper_message: app.store_code(gatekeeper_message_contract()),
         user_account: app.store_code(user_account_contract()),
     }
@@ -189,6 +202,22 @@ pub fn instantiate_contracts(
         )
         .unwrap();
 
+    // setup sessionkey gatekeeper contract
+    let init_msg = andromeda_modules::gatekeeper_common::InstantiateMsg {
+        legacy_owner: Some(legacy_owner.to_string()),
+    };
+    // Instantiate the spendlimit gatekeeper contract
+    let gatekeeper_sessionkey_contract_addr = router
+        .instantiate_contract(
+            code_ids.gatekeeper_sessionkey,
+            legacy_owner.clone(),
+            &init_msg,
+            &[],
+            "gatekeeper_sessionkey",
+            None,
+        )
+        .unwrap();
+
     // setup spendlimit gatekeeper contract
     let init_msg = andromeda_modules::gatekeeper_spendlimit::InstantiateMsg {
         legacy_owner: Some(legacy_owner.to_string()),
@@ -232,7 +261,9 @@ pub fn instantiate_contracts(
             ),
             delay_gatekeeper_contract_addr: None,
             message_gatekeeper_contract_addr: Some(gatekeeper_message_contract_addr.to_string()),
-            sessionkey_gatekeeper_contract_addr: None,
+            sessionkey_gatekeeper_contract_addr: Some(
+                gatekeeper_sessionkey_contract_addr.to_string(),
+            ),
             debt_gatekeeper_contract_addr: None,
         },
         starting_usd_debt: Some(10000u64),
@@ -254,7 +285,7 @@ pub fn instantiate_contracts(
         spendlimit_gatekeeper: gatekeeper_spendlimit_contract_addr,
         message_gatekeeper: gatekeeper_message_contract_addr,
         delay_gatekeeper: Addr::unchecked("Undeployed"),
-        sessionkey_gatekeeper: Addr::unchecked("Undeployed"),
+        sessionkey_gatekeeper: gatekeeper_sessionkey_contract_addr,
         debt_gatekeeper: Addr::unchecked("Undeployed"),
         user_account: user_account_contract_addr,
         asset_unifier: mocked_asset_unifier_addr,

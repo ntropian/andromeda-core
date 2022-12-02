@@ -672,6 +672,7 @@ version = "0.1.2"
 dependencies = [
  "ado-base",
  "andromeda-gatekeeper-message",
+ "andromeda-gatekeeper-sessionkey",
  "andromeda-gatekeeper-spendlimit",
  "andromeda-modules",
  "andromeda-unified-asset",

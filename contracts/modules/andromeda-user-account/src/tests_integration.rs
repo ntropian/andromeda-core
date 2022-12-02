@@ -7,7 +7,7 @@ use andromeda_modules::{
 };
 use common::error::ContractError;
 use cosmwasm_std::{
-    to_binary, Addr, BankMsg, BlockInfo, Coin, CosmosMsg, Timestamp, Uint128, WasmMsg,
+    to_binary, Addr, BankMsg, BlockInfo, Coin, CosmosMsg, StdError, Timestamp, Uint128, WasmMsg,
 };
 use cw_multi_test::Executor;
 use dummy_counter_executable::msg::CheaterDetectedResponse;
@@ -165,6 +165,7 @@ fn user_account_multi_test() {
         .unwrap();
     assert!(can_spend_response.can_spend);
     println!("response: can_spend: {}", can_spend_response.can_spend);
+    println!("attached reason: {}", can_spend_response.reason);
     println!("{}...success{}", GREEN, WHITE);
     println!();
 
@@ -298,6 +299,7 @@ fn user_account_multi_test() {
         .unwrap();
     assert!(can_spend_response.can_spend);
     println!("response: can_spend: {}", can_spend_response.can_spend);
+    println!("attached reason: {}", can_spend_response.reason);
     println!("{}...success{}", GREEN, WHITE);
     println!();
 
@@ -332,6 +334,7 @@ fn user_account_multi_test() {
         .unwrap();
     assert!(can_spend_response.can_spend);
     println!("response: can_spend: {}", can_spend_response.can_spend);
+    println!("attached reason: {}", can_spend_response.reason);
     println!("{}...success{}", GREEN, WHITE);
     println!();
 
@@ -373,6 +376,7 @@ fn user_account_multi_test() {
         .unwrap();
     assert!(can_spend_response.can_spend);
     println!("response: can_spend: {}", can_spend_response.can_spend);
+    println!("attached reason: {}", can_spend_response.reason);
     println!("{}...success{}", GREEN, WHITE);
     println!();
 
@@ -406,6 +410,7 @@ fn user_account_multi_test() {
         .unwrap();
     assert!(can_spend_response.can_spend);
     println!("response: can_spend: {}", can_spend_response.can_spend);
+    println!("attached reason: {}", can_spend_response.reason);
     println!("{}...success{}", GREEN, WHITE);
     println!();
 
@@ -463,7 +468,7 @@ fn user_account_multi_test() {
         };
     let _ = router
         .execute_contract(
-            legacy_owner,
+            legacy_owner.clone(),
             use_contract(
                 contract_addresses.message_gatekeeper.clone(),
                 contract_addresses.clone(),
@@ -601,6 +606,7 @@ fn user_account_multi_test() {
         )
         .unwrap();
     println!("response: can_spend: {}", can_spend_response.can_spend);
+    println!("attached reason: {}", can_spend_response.reason);
     assert!(can_spend_response.can_spend);
     println!(
         "{}...success. Unlike Jimmy T, Alice can't cheat.{}",
@@ -646,7 +652,7 @@ fn user_account_multi_test() {
     };
     let _res = router
         .execute_contract(
-            Addr::unchecked(authorized_spender),
+            Addr::unchecked(authorized_spender.clone()),
             use_contract(
                 contract_addresses.user_account.clone(),
                 contract_addresses.clone(),
@@ -664,7 +670,7 @@ fn user_account_multi_test() {
         .query_wasm_smart(
             use_contract(
                 contract_addresses.dummy_enterprise.clone(),
-                contract_addresses,
+                contract_addresses.clone(),
                 "Query".to_string(),
             ),
             &query_msg,
@@ -675,6 +681,106 @@ fn user_account_multi_test() {
         cheater_detected_response.cheater_detected
     );
     assert!(cheater_detected_response.cheater_detected);
+    println!("{}...success{}", GREEN, WHITE);
+    println!();
+
+    println!(
+        "{}*** Test 5a: Let's create a Session Key ... that will temporarily enable any message ***{}",
+        YELLOW_UNDERLINE, WHITE
+    );
+    let add_session_key_msg =
+        andromeda_modules::gatekeeper_sessionkey::ExecuteMsg::CreateSessionKey {
+            address: authorized_spender.clone(),
+            max_duration: 60,
+            admin_permissions: true,
+        };
+    let _ = router
+        .execute_contract(
+            legacy_owner,
+            use_contract(
+                contract_addresses.sessionkey_gatekeeper.clone(),
+                contract_addresses.clone(),
+                "Execute".to_string(),
+            ),
+            &add_session_key_msg,
+            &[],
+        )
+        .unwrap();
+    println!("{}...success{}", GREEN, WHITE);
+    println!();
+
+    println!(
+        "{}*** Test 5b: Now, we can send with any fields ***{}",
+        YELLOW_UNDERLINE, WHITE
+    );
+    let execute_msg = KobayashiMaru {
+        captain: "janeway".to_string(),
+        strategy: "philosophize".to_string(),
+    };
+    let query_msg = andromeda_modules::user_account::QueryMsg::CanExecute {
+        address: authorized_spender.clone(),
+        msg: UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: contract_addresses.dummy_enterprise.to_string(),
+            msg: to_binary(&execute_msg).unwrap(),
+            funds: vec![],
+        })),
+        funds: vec![],
+    };
+    let can_spend_response: CanSpendResponse = router
+        .wrap()
+        .query_wasm_smart(
+            use_contract(
+                contract_addresses.user_account.clone(),
+                contract_addresses.clone(),
+                "Query".to_string(),
+            ),
+            &query_msg,
+        )
+        .unwrap();
+    println!("response: can_spend: {}", can_spend_response.can_spend);
+    println!("attached reason: {}", can_spend_response.reason);
+    assert!(can_spend_response.can_spend);
+    println!("{}...success{}", GREEN, WHITE);
+    println!();
+
+    println!(
+        "{}*** But if we advance time... ***{}",
+        YELLOW_UNDERLINE, WHITE
+    );
+    let old_block_info = router.block_info();
+    router.set_block(BlockInfo {
+        height: old_block_info.height + 17280,
+        time: Timestamp::from_seconds(old_block_info.time.seconds() + 86400),
+        chain_id: old_block_info.chain_id,
+    });
+
+    println!(
+        "{}*** Test 5c: Now the same fails ***{}",
+        YELLOW_UNDERLINE, WHITE
+    );
+    let execute_msg = KobayashiMaru {
+        captain: "janeway".to_string(),
+        strategy: "philosophize".to_string(),
+    };
+    let query_msg = andromeda_modules::user_account::QueryMsg::CanExecute {
+        address: authorized_spender.clone(),
+        msg: UniversalMsg::Legacy(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: contract_addresses.dummy_enterprise.to_string(),
+            msg: to_binary(&execute_msg).unwrap(),
+            funds: vec![],
+        })),
+        funds: vec![],
+    };
+    let can_spend_response: Result<CanSpendResponse, StdError> = router.wrap().query_wasm_smart(
+        use_contract(
+            contract_addresses.user_account.clone(),
+            contract_addresses.clone(),
+            "Query".to_string(),
+        ),
+        &query_msg,
+    );
+    let error = can_spend_response.unwrap_err();
+    println!("response: can_spend: {}", error);
     println!("{}...success{}", GREEN, WHITE);
     println!();
 }

@@ -22,6 +22,7 @@ thiserror = { version = "1.0.21" }
 andromeda-modules = { version = "0.1.0", path = "../../../packages/andromeda-modules" }
 andromeda-gatekeeper-spendlimit = { path = "../andromeda-gatekeeper-spendlimit" }
 andromeda-gatekeeper-message = { path = "../andromeda-gatekeeper-message" }
+andromeda-gatekeeper-sessionkey = { path = "../andromeda-gatekeeper-sessionkey" }
 ado-base = { path = "../../../packages/ado-base", version = "0.1.0" }
 common = { version = "0.1.0", path = "../../../packages/common" }
 andromeda-unified-asset = { path = "../andromeda-unified-asset" }
