@@ -398,7 +398,7 @@ impl PermissionedAddressParams {
             wrapped_sources: Sources { sources: vec![] },
         };
         println!(
-            "\x1b[3mConverting {} to USDC\x1b[0m",
+            "\x1b[3m\tConverting {} to USDC\x1b[0m",
             unconverted_coin.coins[0]
         );
         let converted_spend_amt = unconverted_coin
@@ -410,7 +410,7 @@ impl PermissionedAddressParams {
             true => self.spend_limits[0].amount,
         };
         println!(
-            "\x1b[3mReducing limit of {} by {}\x1b[0m",
+            "\x1b[3m\tReducing limit of {} by {}\x1b[0m",
             limit_to_check, converted_spend_amt.unified_asset
         );
         let limit_remaining = limit_to_check

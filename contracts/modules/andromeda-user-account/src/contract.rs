@@ -76,14 +76,21 @@ fn from_semver(err: semver::Error) -> StdError {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    match msg {
+    match msg.clone() {
         ExecuteMsg::UpdateLegacyOwner { new_owner } => {
             let valid_new_owner = deps.api.addr_validate(&new_owner)?;
-            update_legacy_owner(deps, info, valid_new_owner)
+            let account = ACCOUNT.load(deps.storage)?;
+            if account.owner_updates_delay_secs.unwrap_or(0u64) > 0u64 {
+                let cosmos_msg = account.dispatch_with_delay(msg.into_cosmos_msg(env.contract.address)?)?;
+                Ok(Response::new()
+                .add_message(cosmos_msg))
+            } else {
+                update_legacy_owner(deps, info, valid_new_owner)
+            }
         }
         ExecuteMsg::ProposeUpdateOwner { new_owner: _ } => todo!(),
         ExecuteMsg::ChangeOwnerUpdatesDelay { new_delay: _ } => todo!(),

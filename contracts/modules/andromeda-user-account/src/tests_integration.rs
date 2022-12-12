@@ -164,8 +164,8 @@ fn user_account_multi_test() {
         )
         .unwrap();
     assert!(can_spend_response.can_spend);
-    println!("response: can_spend: {}", can_spend_response.can_spend);
-    println!("attached reason: {}", can_spend_response.reason);
+    println!("\tresponse: can_spend: {}", can_spend_response.can_spend);
+    println!("\tattached reason: {}", can_spend_response.reason);
     println!("{}...success{}", GREEN, WHITE);
     println!();
 
@@ -231,7 +231,7 @@ fn user_account_multi_test() {
         )
         .map_err(ContractError::Std);
     let error = can_spend_response.unwrap_err();
-    println!("response: can_spend: {}", error);
+    println!("\tresponse: can_spend: {}", error);
     println!("{}...failed as expected{}", GREEN, WHITE);
     println!();
 
@@ -298,8 +298,8 @@ fn user_account_multi_test() {
         )
         .unwrap();
     assert!(can_spend_response.can_spend);
-    println!("response: can_spend: {}", can_spend_response.can_spend);
-    println!("attached reason: {}", can_spend_response.reason);
+    println!("\tresponse: can_spend: {}", can_spend_response.can_spend);
+    println!("\tattached reason: {}", can_spend_response.reason);
     println!("{}...success{}", GREEN, WHITE);
     println!();
 
@@ -333,8 +333,8 @@ fn user_account_multi_test() {
         )
         .unwrap();
     assert!(can_spend_response.can_spend);
-    println!("response: can_spend: {}", can_spend_response.can_spend);
-    println!("attached reason: {}", can_spend_response.reason);
+    println!("\tresponse: can_spend: {}", can_spend_response.can_spend);
+    println!("\tattached reason: {}", can_spend_response.reason);
     println!("{}...success{}", GREEN, WHITE);
     println!();
 
@@ -375,8 +375,8 @@ fn user_account_multi_test() {
         )
         .unwrap();
     assert!(can_spend_response.can_spend);
-    println!("response: can_spend: {}", can_spend_response.can_spend);
-    println!("attached reason: {}", can_spend_response.reason);
+    println!("\tresponse: can_spend: {}", can_spend_response.can_spend);
+    println!("\tattached reason: {}", can_spend_response.reason);
     println!("{}...success{}", GREEN, WHITE);
     println!();
 
@@ -409,8 +409,8 @@ fn user_account_multi_test() {
         )
         .unwrap();
     assert!(can_spend_response.can_spend);
-    println!("response: can_spend: {}", can_spend_response.can_spend);
-    println!("attached reason: {}", can_spend_response.reason);
+    println!("\tresponse: can_spend: {}", can_spend_response.can_spend);
+    println!("\tattached reason: {}", can_spend_response.reason);
     println!("{}...success{}", GREEN, WHITE);
     println!();
 
@@ -443,7 +443,7 @@ fn user_account_multi_test() {
         )
         .map_err(ContractError::Std);
     let error = can_spend_response.unwrap_err();
-    println!("response: can_spend: {}", error);
+    println!("\tresponse: can_spend: {}", error);
     println!("{}...failed as expected{}", GREEN, WHITE);
     println!();
 
@@ -537,7 +537,7 @@ fn user_account_multi_test() {
         )
         .map_err(ContractError::Std);
     let error = can_spend_response.unwrap_err();
-    println!("response: can_spend: {}", error);
+    println!("\tresponse: can_spend: {}", error);
     println!("{}...of course not, it's impossible{}", GREEN, WHITE);
     println!();
 
@@ -570,7 +570,7 @@ fn user_account_multi_test() {
         )
         .map_err(ContractError::Std);
     let error = can_spend_response.unwrap_err();
-    println!("response: can_spend: {}", error);
+    println!("\tresponse: can_spend: {}", error);
     println!(
         "{}...nope. One too many Priceline commercials.{}",
         GREEN, WHITE
@@ -605,8 +605,8 @@ fn user_account_multi_test() {
             &query_msg,
         )
         .unwrap();
-    println!("response: can_spend: {}", can_spend_response.can_spend);
-    println!("attached reason: {}", can_spend_response.reason);
+    println!("\tresponse: can_spend: {}", can_spend_response.can_spend);
+    println!("\tattached reason: {}", can_spend_response.reason);
     assert!(can_spend_response.can_spend);
     println!(
         "{}...success. Unlike Jimmy T, Alice can't cheat.{}",
@@ -628,7 +628,7 @@ fn user_account_multi_test() {
         )
         .unwrap();
     println!(
-        "response: cheater_detected: {}",
+        "\tresponse: cheater_detected: {}",
         cheater_detected_response.cheater_detected
     );
     assert!(!cheater_detected_response.cheater_detected);
@@ -677,7 +677,7 @@ fn user_account_multi_test() {
         )
         .unwrap();
     println!(
-        "response: cheater_detected: {}",
+        "\tresponse: cheater_detected: {}",
         cheater_detected_response.cheater_detected
     );
     assert!(cheater_detected_response.cheater_detected);
@@ -737,8 +737,8 @@ fn user_account_multi_test() {
             &query_msg,
         )
         .unwrap();
-    println!("response: can_spend: {}", can_spend_response.can_spend);
-    println!("attached reason: {}", can_spend_response.reason);
+    println!("\tresponse: can_spend: {}", can_spend_response.can_spend);
+    println!("\tattached reason: {}", can_spend_response.reason);
     assert!(can_spend_response.can_spend);
     println!("{}...success{}", GREEN, WHITE);
     println!();
@@ -780,7 +780,7 @@ fn user_account_multi_test() {
         &query_msg,
     );
     let error = can_spend_response.unwrap_err();
-    println!("response: can_spend: {}", error);
+    println!("\tresponse: can_spend: {}", error);
     println!("{}...success{}", GREEN, WHITE);
     println!();
 }

@@ -5,7 +5,7 @@ use common::{
 };
 use cosmwasm_std::{
     ensure, to_binary, BankMsg, Coin, CosmosMsg, Deps, QueryRequest, StakingMsg, StdError, WasmMsg,
-    WasmQuery,
+    WasmQuery, StdResult, Binary,
 };
 use cw_storage_plus::Item;
 use schemars::JsonSchema;
@@ -32,7 +32,6 @@ use SessionkeyQueryMsg::CanExecute;
 pub struct InstantiateMsg {
     pub account: UserAccount,
     pub starting_usd_debt: Option<u64>,
-    pub owner_updates_delay_secs: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -58,6 +57,27 @@ pub enum ExecuteMsg {
     UpdateLegacyOwner {
         new_owner: String,
     },
+}
+
+impl ExecuteMsg {
+    /// serializes the message
+    pub fn into_binary(self) -> StdResult<Binary> {
+        let msg = self;
+        to_binary(&msg)
+    }
+    /// creates a cosmos_msg sending this struct to the named contract
+    pub fn into_cosmos_msg<T: Into<String>, C>(self, contract_addr: T) -> StdResult<CosmosMsg<C>>
+    where
+        C: Clone + std::fmt::Debug + PartialEq + JsonSchema,
+    {
+        let msg = self.into_binary()?;
+        let execute = WasmMsg::Execute {
+            contract_addr: contract_addr.into(),
+            msg,
+            funds: vec![],
+        };
+        Ok(execute.into())
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
@@ -98,6 +118,7 @@ pub struct GatekeeperResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct UserAccount {
     pub legacy_owner: Option<String>,
+    pub owner_updates_delay_secs: Option<u64>,
     /// Contract that manages spend limits for permissioned addresses
     pub spendlimit_gatekeeper_contract_addr: Option<String>,
     /// Contract that manages actions which incur a delay
@@ -131,16 +152,16 @@ impl UserAccount {
         // if user is owner, check debt and delay
         if let Some(addy) = self.legacy_owner.clone() {
             if addy == address {
-                println!("Calling address is user account legacy owner.");
+                println!("\x1b[3m\tCalling address is user account legacy owner.\x1b[0m");
                 return self.can_owner_execute(deps, msgs[0].clone());
             }
         } else if ADOContract::default().is_owner_or_operator(deps.storage, address.as_str())?
         // probably todo: operators can have restrictions here
         {
-            println!("Calling address is user account owner.");
+            println!("\x1b[3m\tCalling address is user account owner.\x1b[0m");
             return self.can_owner_execute(deps, msgs[0].clone());
         }
-        println!("Calling address is not an owner.");
+        println!("\x1b[3m\tCalling address is not an owner.\x1b[0m");
         self.can_nonowner_execute(deps, address, msgs[0].clone())
     }
 
@@ -149,12 +170,37 @@ impl UserAccount {
         _deps: Deps,
         _msg: UniversalMsg,
     ) -> Result<CanSpendResponse, ContractError> {
-        // check debt (once done)
         // check delay
+        // How delay transactions are handled is a bit TBD; the Delay Gatekeeper doesn't
+        // have transaction analysis capabilities at the moment, and those would seem
+        // redundant with the submsg+funds analysis User Account can do and the deep
+        // message analysis Spendlimit Gatekeeper can do.
+        //
+        // For now, we will force admin updates to be delayed, but that specific case
+        // is implemented in the actual `propose_update_owner` handling, not here.
         Ok(CanSpendResponse {
             can_spend: true,
-            reason: "owner checks not implemented yet".to_string(),
+            reason: "caller is owner with no debt".to_string(),
         })
+        // check debt (once done)
+    }
+
+    pub fn dispatch_with_delay(&self, msg: CosmosMsg) -> Result<CosmosMsg, ContractError> {
+        let unwrapped_contract_addr =
+            self.delay_gatekeeper_contract_addr
+                .clone()
+                .ok_or(ContractError::Std(StdError::GenericErr {
+                    msg: "No known delay gatekeeper address".to_string(),
+                }))?;
+        let delay_msg = crate::gatekeeper_delay::ExecuteMsg::BeginTransaction {
+            message: msg,
+            delay_seconds: self.owner_updates_delay_secs.unwrap_or(0),
+        };
+        Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: unwrapped_contract_addr,
+            msg: to_binary(&delay_msg)?,
+            funds: vec![],
+        }))
     }
 
     // hardcode for now
@@ -177,12 +223,18 @@ impl UserAccount {
         msg: UniversalMsg,
     ) -> Result<CanSpendResponse, ContractError> {
         // Is this an admin-strength session key?
-        println!("\x1b[3mChecking if address is admin session key\x1b[0m");
+        println!(
+            "\x1b[3m\tChecking if address `{}` is admin session key...\x1b[0m",
+            address
+        );
         if self.is_admin_session_key(deps, address.clone(), msg.clone())? {
+            println!("\x1b[3m\tYes, address `{}` is session key.\x1b[0m", address);
             return Ok(CanSpendResponse {
                 can_spend: true,
                 reason: "Sender is active admin session key".to_string(),
             });
+        } else {
+            println!("\x1b[3m\tNo, not a session key.\x1b[0m");
         }
 
         // check for blanket authorizations ("any permissioned address can spend this")
@@ -208,7 +260,7 @@ impl UserAccount {
                 });
             }
         }
-        println!("\x1b[3mNo blanket authorizations apply. Checking if tx uses funds...\x1b[0m");
+        println!("\x1b[3m\tNo blanket authorizations apply. Checking if tx uses funds...\x1b[0m");
 
         // check if TX is using funds at all. (This way we know whether
         // to run funds and debt checks)
@@ -218,7 +270,7 @@ impl UserAccount {
         // to pass message gatekeeper, if applicable, if the permissioned address
         // has an active spend limit
         let mut spend_limit_authorization_rider = false;
-        println!("\x1b[3mAnalyzing message: {}\x1b[0m", msg);
+        println!("\x1b[3m\tAnalyzing message: \x1b[90m{:#?}\x1b[0m", msg);
         let funds: Vec<Coin> = match msg.clone() {
             //strictly speaking cw20 spend limits not supported yet, unless blanket authorized.
             //As kludge, send/transfer is blocked if debt exists. Otherwise, depends on
@@ -285,7 +337,7 @@ impl UserAccount {
 
         let empty_funds: Vec<Coin> = vec![];
         if funds != empty_funds {
-            println!("\x1b[3mYes, this TX uses funds.\x1b[0m");
+            println!("\x1b[3m\tYes, this TX uses funds.\x1b[0m");
 
             // if so...
             // we must have a spend controller
@@ -300,11 +352,13 @@ impl UserAccount {
 
             // also...
             // check that debt is repaid: otherwise, attach a debt repay msg
+        } else {
+            println!("\x1b[3m\tNo funds used or attached in this transaction.\x1b[0m");
         }
 
-        println!("\x1b[3mCheck that message is authorized...\x1b[0m");
+        println!("\x1b[3m\tCheck that message is authorized...\x1b[0m");
         println!(
-            "\x1b[3mSpend limit authorization rider is: {}\x1b[0m",
+            "\x1b[3m\tSpend limit authorization rider is: {}\x1b[0m",
             spend_limit_authorization_rider
         );
 

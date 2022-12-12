@@ -104,6 +104,7 @@ pub fn user_account_instantiate_msg(
     andromeda_modules::user_account::InstantiateMsg {
         account: UserAccount {
             legacy_owner,
+            owner_updates_delay_secs: owner_updates_delay_secs,
             spendlimit_gatekeeper_contract_addr,
             message_gatekeeper_contract_addr,
             delay_gatekeeper_contract_addr: None,
@@ -111,7 +112,6 @@ pub fn user_account_instantiate_msg(
             debt_gatekeeper_contract_addr: None,
         },
         starting_usd_debt,
-        owner_updates_delay_secs,
     }
 }
 
@@ -256,6 +256,7 @@ pub fn instantiate_contracts(
     let init_msg = andromeda_modules::user_account::InstantiateMsg {
         account: UserAccount {
             legacy_owner: Some(legacy_owner.to_string()),
+            owner_updates_delay_secs: Some(10u64),
             spendlimit_gatekeeper_contract_addr: Some(
                 gatekeeper_spendlimit_contract_addr.to_string(),
             ),
@@ -267,7 +268,6 @@ pub fn instantiate_contracts(
             debt_gatekeeper_contract_addr: None,
         },
         starting_usd_debt: Some(10000u64),
-        owner_updates_delay_secs: Some(10u64),
     };
     // Instantiate the user account contract
     let user_account_contract_addr = router
