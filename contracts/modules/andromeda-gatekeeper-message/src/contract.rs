@@ -25,7 +25,7 @@ use semver::Version;
 use serde_json_value_wasm::{Map, Value};
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:andromeda-gatekeeper";
+const CONTRACT_NAME: &str = "crates.io:andromeda-gatekeeper-message";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const DEFAULT_LIMIT: u32 = 10;
