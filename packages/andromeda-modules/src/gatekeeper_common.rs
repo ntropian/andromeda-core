@@ -12,7 +12,7 @@ pub struct InstantiateMsg {
     pub legacy_owner: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub enum UniversalMsg {
     Andromeda(AndromedaMsg),
     Legacy(CosmosMsg),

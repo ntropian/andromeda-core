@@ -1,0 +1,41 @@
+[package]
+name = "andromeda-gatekeeper-spendlimit"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
+
+[dependencies]
+cosmwasm-std = "1.0.0"
+serde = { version = "1.0.127", default-features = false, features = ["derive"] }
+schemars = "0.8.3"
+cw-storage-plus = "0.13.2"
+cw1 = "0.13.2"
+cw2 = "0.13.2"
+cw20 = "0.13.2"
+semver = "1"
+serde-json-wasm = "0.4.1"
+cw-utils = "0.13.4"
+thiserror = { version = "1.0.21" }
+chrono = { path = "../../../packages/chrono" }
+
+andromeda-modules = { version = "0.1.0", path = "../../../packages/andromeda-modules" }
+andromeda-unified-asset = { path = "../andromeda-unified-asset" }
+dummy-price-contract = { path = "../../dummy/dummy-price-contract" }
+common = { version = "0.1.0", path = "../../../packages/common" }
+serde-json-value-wasm = { version = "0.1.0", path = "../../../packages/serde-json-value-wasm" }
+ado-base = { path = "../../../packages/ado-base", version = "0.1.0"}
+
+[dev-dependencies]
+anyhow = "1"
+assert_matches = "1"
+cosmwasm-schema = { version = "1.0.0" }
+cw-multi-test = { version = "0.13.4" }
+derivative = "2"

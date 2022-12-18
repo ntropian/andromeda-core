@@ -353,14 +353,14 @@ pub fn check_authorizations_against_fields(
                             // remove this auth from results, since its field mismatches
                             // still to be implemented: range and != matching logic
                             working_auths.retain(|item| item.0 != this_idx);
-                            offset = offset + 1;
+                            offset += 1;
                             break 'inner;
                         }
                         // else, keep this auth
                     } else {
                         // remove this auth from results, since it doesn't include the required field
                         working_auths.retain(|item| item.0 != this_idx);
-                        offset = offset + 1;
+                        offset += 1;
                         break 'inner;
                     }
                 }
@@ -463,8 +463,6 @@ pub fn check_msg(
             cosmwasm_std::CosmosMsg::Custom(_) => Ok(todo_auths),
             cosmwasm_std::CosmosMsg::Staking(_) => Ok(todo_auths),
             cosmwasm_std::CosmosMsg::Distribution(_) => Ok(todo_auths),
-            cosmwasm_std::CosmosMsg::Stargate { type_url, value } => Ok(todo_auths),
-            cosmwasm_std::CosmosMsg::Ibc(_) => Ok(todo_auths),
             cosmwasm_std::CosmosMsg::Wasm(msg) => match msg {
                 WasmMsg::Execute {
                     contract_addr,
@@ -502,7 +500,6 @@ pub fn check_msg(
                 WasmMsg::ClearAdmin { contract_addr } => Ok(todo_auths),
                 _ => Ok(todo_auths),
             },
-            cosmwasm_std::CosmosMsg::Gov(_) => Ok(todo_auths),
             _ => Ok(todo_auths),
         },
     }

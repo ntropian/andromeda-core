@@ -128,8 +128,9 @@ fn cancel_transaction(
 }
 
 /// Completes a `DelayedMsg` if its delay has expired. Note that currently this
-/// can be done by any party; it does not require owner authorization, as they
-/// have already authorized that the transaction begin.
+/// can be done by any party; it does not require owner authorization. However, the
+/// message itself may be an action that only will succeed if the tx is initiated by
+/// a specific sender.
 fn complete_transaction(
     deps: DepsMut,
     _info: MessageInfo,

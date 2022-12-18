@@ -1,0 +1,3 @@
+[submodule "contracts/modules/dummy-price-contract"]
+	path = contracts/modules/dummy-price-contract
+	url = git@github.com:obi-wallet/dummy-price-contract.git

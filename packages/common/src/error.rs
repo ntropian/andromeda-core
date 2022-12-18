@@ -3,6 +3,7 @@ use cw20_base::ContractError as Cw20ContractError;
 use cw721_base::ContractError as Cw721ContractError;
 use cw_utils::{Expiration, ParseReplyError, PaymentError};
 use std::convert::From;
+
 use std::string::FromUtf8Error;
 use thiserror::Error;
 
@@ -471,6 +472,9 @@ pub enum ContractError {
 
     #[error("Invalid Expiration Time")]
     InvalidExpirationTime {},
+
+    #[error("Cannot spend more than limit: {0} {1}")]
+    CannotSpendMoreThanLimit(String, String),
 }
 
 impl From<Cw20ContractError> for ContractError {
